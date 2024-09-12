@@ -1,0 +1,42 @@
+[
+  {
+    "value": "BURGERS",
+    "label": "Burgers"
+  },
+  {
+    "value": "CHINESE",
+    "label": "Chinese"
+  },
+  {
+    "value": "DESSERT",
+    "label": "Dessert"
+  },
+  {
+    "value": "DRINKS",
+    "label": "Drinks"
+  },
+  {
+    "value": "FASTFOOD",
+    "label": "Fast Food"
+  },
+  {
+    "value": "FRENCH",
+    "label": "French"
+  },
+  {
+    "value": "INDIAN",
+    "label": "Indian"
+  },
+  {
+    "value": "MEXICAN",
+    "label": "Mexican"
+  },
+  {
+    "value": "SEAFOOD",
+    "label": "Sea Food"
+  },
+  {
+    "value": "THAI",
+    "label": "Thai"
+  }
+]

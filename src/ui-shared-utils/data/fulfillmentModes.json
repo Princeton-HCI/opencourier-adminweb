@@ -1,0 +1,10 @@
+[
+  {
+    "value": "DELIVERY",
+    "label": "Delivery"
+  },
+  {
+    "value": "PICKUP",
+    "label": "Pickup"
+  }
+]

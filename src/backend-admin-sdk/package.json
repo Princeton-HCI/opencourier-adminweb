@@ -1,0 +1,15 @@
+{
+  "name": "@opencourier/backend-admin-sdk",
+  "version": "0.0.0",
+  "description": "OpenCourier Admin API SDK",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit --pretty --project tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "5.1.6"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
