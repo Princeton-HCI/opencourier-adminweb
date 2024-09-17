@@ -11,8 +11,8 @@ export const api = createApi({
 })
 
 export const prepareAdminSdk = (accessToken: string) => {
-  const settings = {
-    API_URL: process.env.NEXT_PUBLIC_API_URL?.replace('/v1', '') ?? '',
+  const settings = { 
+    API_URL: process.env.NEXT_PUBLIC_API_URL?.replace('/v1', '')?.replace(/\/$/, '') ?? ''
   }
   return new BackendAdminSdk({
     basePath: settings.API_URL,
