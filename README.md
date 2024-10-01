@@ -2,9 +2,11 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 ## Getting Started
 
-First, run the development server:
+First, copy the .env file:
 
 ```bash
+cp local.env .env
+# then run the server 
 npm run dev
 # or
 yarn dev
