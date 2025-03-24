@@ -1,5 +1,5 @@
 import { BaseAPI, Configuration, ConfigurationParameters } from './runtime'
-import { AuthApi, ConfigApi, CourierApi, CourierSettingsApi, DeliveriesApi, LocationsApi } from "./apis";
+import { AuthApi, ConfigApi, CourierApi, CourierSettingsApi, DeliveriesApi, LocationsApi, TestingApi} from "./apis";
 import { ApiError } from './errors'
 
 export class BackendAdminSdk {
@@ -83,6 +83,11 @@ export class BackendAdminSdk {
 
   config(): ConfigApi {
     return this.getOrCreateApi(ConfigApi)
+  }
+
+  // Add the TestingApi method
+  testing(): TestingApi {
+    return this.getOrCreateApi(TestingApi);
   }
 
   private getOrCreateApi<T extends BaseAPI>(apiClass: { new (config: Configuration): T }): T {

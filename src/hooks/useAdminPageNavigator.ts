@@ -10,6 +10,7 @@ export enum EAdminRoutes {
   DELIVERY_DETAILS = '/deliveries/[deliveryId]',
   COURIERS = '/couriers',
   COURIER_DETAILS = '/couriers/[courierId]',
+  TESTING = '/test-matching'
 }
 
 export const Routes = Object.values(EAdminRoutes)

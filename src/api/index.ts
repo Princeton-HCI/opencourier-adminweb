@@ -10,10 +10,11 @@ export const api = createApi({
   endpoints: () => ({}),
 })
 
-export const prepareAdminSdk = (accessToken: string) => {
+export const prepareAdminSdk = (accessToken: string, alternativePath?: string) => {
   const settings = { 
     API_URL: process.env.NEXT_PUBLIC_API_URL?.replace('/v1', '')?.replace(/\/$/, '') ?? ''
   }
+
   return new BackendAdminSdk({
     basePath: settings.API_URL,
     accessToken: () => accessToken,

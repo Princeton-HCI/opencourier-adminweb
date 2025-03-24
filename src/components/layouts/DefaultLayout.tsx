@@ -11,6 +11,7 @@ import {
 import { cn, useAppDispatch, useScreenSize } from '../../ui-shared-utils'
 import {
   BuildingIcon,
+  CarrotIcon,
   CarTaxiFrontIcon,
   LayoutDashboardIcon,
   ScrollTextIcon,
@@ -41,6 +42,11 @@ const sidebarNavItems: NavLink[] = [
     title: 'Instance Configuration',
     icon: CarTaxiFrontIcon,
     href: EAdminRoutes.INSTANCE_CONFIGURATION,
+  },
+  {
+    title: 'Testing',
+    icon: CarrotIcon,
+    href: EAdminRoutes.TESTING,
   },
 ]
 

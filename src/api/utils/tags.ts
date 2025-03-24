@@ -7,6 +7,8 @@ const tagTypes = {
   customer: 'Customer',
   payment: 'Payment',
   config: 'Config',
+  couriers: 'Couriers', // Added couriers tag type
+  matchingResults: 'MatchingResults', // Added matching results tag type
 }
 
 export const Tags = {
@@ -22,4 +24,6 @@ export const Tags = {
   customer: tagTypes['customer'],
   payment: tagTypes['payment'],
   config: tagTypes['config'],
+  couriers: tagTypes['couriers'], // Added couriers tag
+  matchingResults: tagTypes['matchingResults'], // Added matching results tag
 }

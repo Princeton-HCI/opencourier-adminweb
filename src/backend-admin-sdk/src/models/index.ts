@@ -22,3 +22,5 @@ export * from './PaginationDto';
 export * from './UserAdminDto';
 export * from './UserInfoAdminDto';
 export * from './UserSessionAdminDto';
+export * from './ICourierMatcherInput'; 
+export * from './ICourierMatcherResult';

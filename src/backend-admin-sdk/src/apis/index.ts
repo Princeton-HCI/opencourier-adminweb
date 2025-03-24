@@ -6,3 +6,4 @@ export * from './CourierApi';
 export * from './CourierSettingsApi';
 export * from './DeliveriesApi';
 export * from './LocationsApi';
+export * from './TestingApi';
