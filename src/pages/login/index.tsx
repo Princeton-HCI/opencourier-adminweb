@@ -8,12 +8,12 @@ function LoginPage() {
           <div
             className="absolute inset-0 bg-zinc-900"
             style={{
-              backgroundImage: 'url(/images/food-table.jpg)',
+              // backgroundImage: 'url(/images/food-table.jpg)',
               backgroundSize: 'auto 100vh',
               backgroundPosition: 'center right',
             }}
           />
-          <div className="relative z-20 flex items-center text-lg font-medium">NOSH Admin</div>
+          <div className="relative z-20 flex items-center text-lg font-medium">Admin</div>
         </div>
         <div className="mx-auto h-full flex flex-col justify-center w-[300px]">
           <div className="space-y-2 text-center mb-4">
