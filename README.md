@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+You can also use `yarn add next@latest react@latest react-dom@latest` in the project folder to install nextjs.
+
 ## Getting Started
 
 First, copy the .env file:
