@@ -32,6 +32,9 @@ import {
   closeModal,
 } from "@/admin-web-components/components/molecules/modal";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useRef } from "react";
+import { union, featureCollection } from "@turf/turf";
 
 const InstanceConfigurationPage: NextPage = () => {
   const instanceConfigOptionsResponse = useGetInstanceConfigOptionsQuery({});
@@ -48,6 +51,44 @@ const InstanceConfigurationPage: NextPage = () => {
       contactEmail: "",
     },
   });
+
+  const regionDataRef = useRef<any>(null);
+
+  const handleSaveRegion = () => {
+    const rawData = regionDataRef.current;
+
+    // 1. Safety Checks
+    if (!rawData) {
+      console.warn("No region data found");
+      return;
+    }
+
+    // 2. Normalize Data: Ensure we have a FeatureCollection
+    // The Map component might return an Array [] or a FeatureCollection object {}
+    let collection;
+
+    if (Array.isArray(rawData)) {
+      // If it's just an array of polygons, wrap them
+      collection = featureCollection(rawData);
+    } else if (rawData.type === "FeatureCollection") {
+      // It's already formatted correctly
+      collection = rawData;
+    }
+
+    if (collection.features.length > 1) {
+      try {
+        const mergedGeoJSON = union(collection);
+        console.log("Saving merged region:", mergedGeoJSON);
+
+        // Send to backend
+        // await setInstanceConfigMutation({ operatingRegion: mergedGeoJSON });
+      } catch (error) {
+        console.error("Turf merge failed:", error);
+      }
+    } else {
+      console.log(collection.features[0]);
+    }
+  };
 
   const onInstanceConfigChangeDietaryRestrictions = async (select: any) => {
     const result = [];
@@ -79,6 +120,15 @@ const InstanceConfigurationPage: NextPage = () => {
     console.log(data);
   };
 
+  const AdminMap = dynamic(() => import("@/components/Map"), {
+    ssr: false,
+    loading: () => (
+      <div className="h-[480px] w-full bg-gray-100 animate-pulse rounded-lg">
+        Loading Map...
+      </div>
+    ),
+  });
+
   return (
     <DefaultLayout>
       <div className="flex justify-between">
@@ -86,7 +136,7 @@ const InstanceConfigurationPage: NextPage = () => {
           Instance configuration
         </h2>
         <button
-          className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium"
+          className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700"
           onClick={() =>
             openModal({
               id: "instance-registration-modal",
@@ -204,7 +254,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     {/* Submit */}
                     <button
                       type="submit"
-                      className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium w-fit"
+                      className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium w-fit hover:bg-slate-700"
                     >
                       Register
                     </button>
@@ -236,6 +286,25 @@ const InstanceConfigurationPage: NextPage = () => {
             Edit Privacy Policy
           </Label>
         </Link>
+      </div>
+      <br />
+      <Label className="text-right">Operating Region</Label>
+      <br />
+      <div className="pt-2 max-w-4xl">
+        {/* 2. Render Map */}
+        <div className="mb-2">
+          <AdminMap
+            onUpdate={(val) => {
+              regionDataRef.current = val; // store latest GeoJSON
+            }}
+          />
+        </div>
+        <button
+          onClick={handleSaveRegion}
+          className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700"
+        >
+          Save Region
+        </button>
       </div>
       <br />
       <Label className="text-right">Courier matcher type</Label>
