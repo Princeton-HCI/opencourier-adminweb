@@ -16,6 +16,7 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  useToast,
 } from "@/admin-web-components";
 import {
   COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN,
@@ -33,19 +34,21 @@ import {
 } from "@/admin-web-components/components/molecules/modal";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { union, featureCollection } from "@turf/turf";
 
 const InstanceConfigurationPage: NextPage = () => {
   const instanceConfigOptionsResponse = useGetInstanceConfigOptionsQuery({});
   const instanceConfigResponse = useGetInstanceConfigQuery({});
   const [setInstanceConfigMutation] = useSetInstanceConfigMutation();
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
   const hostname = window.location.origin;
   const form = useForm({
     defaultValues: {
       name: "",
       domainUrl: hostname,
-      description: "",
+      descriptionURL: "",
       termsOfServiceUrl: `${hostname}/termsofservice.html`,
       privacyPolicyUrl: `${hostname}/privacypolicy.html`,
       contactEmail: "",
@@ -53,6 +56,60 @@ const InstanceConfigurationPage: NextPage = () => {
   });
 
   const regionDataRef = useRef<any>(null);
+
+  // Local state for all config fields
+  const [config, setConfig] = useState({
+    name: "",
+    imageURL: "",
+    courierMatcherType: "",
+    quoteCalculationType: "",
+    geoCalculationType: "",
+    deliveryDurationCalculationType: "",
+    courierCompensationCalculationType: "",
+    defaultDietaryRestrictions: [] as string[],
+    currency: "",
+    distanceUnit: "",
+    maxAssignmentDistance: 0,
+    maxDriftDistance: 0,
+    quoteExpirationMinutes: 0,
+    defaultCourierPayRate: 0,
+    defaultMinimumCourierPay: 0,
+    defaultMaxWorkingHours: 0,
+    feePercentageAmount: 0,
+  });
+
+  // Sync server data to local state
+  useEffect(() => {
+    const data = instanceConfigResponse.data;
+    if (data) {
+      const metadata = (data.metadata as any) || {};
+      setConfig({
+        name: metadata.name ?? "",
+        imageURL: metadata.imageURL ?? "",
+        courierMatcherType: data.courierMatcherType ?? "",
+        quoteCalculationType: data.quoteCalculationType ?? "",
+        geoCalculationType: data.geoCalculationType ?? "",
+        deliveryDurationCalculationType:
+          data.deliveryDurationCalculationType ?? "",
+        courierCompensationCalculationType:
+          data.courierCompensationCalculationType ?? "",
+        defaultDietaryRestrictions: Array.isArray(
+          data.defaultDietaryRestrictions,
+        )
+          ? data.defaultDietaryRestrictions
+          : [],
+        currency: data.currency ?? "",
+        distanceUnit: data.distanceUnit ?? "",
+        maxAssignmentDistance: data.maxAssignmentDistance ?? 0,
+        maxDriftDistance: data.maxDriftDistance ?? 0,
+        quoteExpirationMinutes: data.quoteExpirationMinutes ?? 0,
+        defaultCourierPayRate: data.defaultCourierPayRate ?? 0,
+        defaultMinimumCourierPay: data.defaultMinimumCourierPay ?? 0,
+        defaultMaxWorkingHours: data.defaultMaxWorkingHours ?? 0,
+        feePercentageAmount: data.feePercentageAmount ?? 0,
+      });
+    }
+  }, [instanceConfigResponse.data]);
 
   const handleSaveRegion = () => {
     const rawData = regionDataRef.current;
@@ -90,7 +147,7 @@ const InstanceConfigurationPage: NextPage = () => {
     }
   };
 
-  const onInstanceConfigChangeDietaryRestrictions = async (select: any) => {
+  const onInstanceConfigChangeDietaryRestrictions = (select: any) => {
     const result = [];
     const options = select && select.options;
     let opt;
@@ -102,18 +159,37 @@ const InstanceConfigurationPage: NextPage = () => {
       }
     }
 
-    await setInstanceConfigMutation({
-      defaultDietaryRestrictions: result,
-    });
+    setConfig({ ...config, defaultDietaryRestrictions: result });
   };
 
-  const onInstanceConfigChange = async (
-    key: keyof InstanceConfigSettingsAdminInput,
-    value: any
-  ) => {
-    await setInstanceConfigMutation({
-      [key]: value,
-    });
+  const handleSaveAllChanges = async () => {
+    setIsSaving(true);
+    try {
+      const { name, imageURL, ...restConfig } = config;
+      const existingMetadata =
+        (instanceConfigResponse.data?.metadata as any) || {};
+      await setInstanceConfigMutation({
+        ...restConfig,
+        metadata: {
+          ...existingMetadata,
+          name,
+          imageURL,
+        },
+      } as any);
+      toast({
+        title: "Success!",
+        description: "Instance configuration saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save instance configuration. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Failed to save configuration:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const onSubmit = (data: any) => {
@@ -184,15 +260,16 @@ const InstanceConfigurationPage: NextPage = () => {
                     {/* Instance Description */}
                     <FormField
                       control={form.control}
-                      name="description"
+                      name="descriptionURL"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Instance Description</FormLabel>
                           <FormControl>
-                            <textarea
-                              {...field}
-                              rows={4}
-                              className="mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black resize-none"
+                            <input
+                              type="text"
+                              value={`${hostname}/description.html`}
+                              readOnly
+                              className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
                             />
                           </FormControl>
                           <FormMessage />
@@ -307,25 +384,48 @@ const InstanceConfigurationPage: NextPage = () => {
         </button>
       </div>
       <br />
+      <Label className="text-right">Instance name</Label>
+      <Input
+        key="instanceName"
+        type="text"
+        value={config.name}
+        onChange={(event) =>
+          setConfig({
+            ...config,
+            name: event.target.value,
+          })
+        }
+        className="max-w-[280px]"
+      />
+      <br />
+      <Label className="text-right">Instance image URL</Label>
+      <Input
+        key="imageURL"
+        type="text"
+        value={config.imageURL}
+        onChange={(event) =>
+          setConfig({
+            ...config,
+            imageURL: event.target.value,
+          })
+        }
+        className="max-w-[280px]"
+      />
+      <br />
       <Label className="text-right">Courier matcher type</Label>
       <br />
       <select
+        value={config.courierMatcherType}
         onChange={(e) =>
-          onInstanceConfigChange("courierMatcherType", e.target.value)
+          setConfig({ ...config, courierMatcherType: e.target.value })
         }
       >
         {instanceConfigOptionsResponse.data?.courierMatcherType.map(
           (option) => (
-            <option
-              key={option}
-              value={option}
-              selected={
-                instanceConfigResponse.data?.courierMatcherType === option
-              }
-            >
+            <option key={option} value={option}>
               {COURIER_MATCHER_TYPE_TO_HUMAN[option]}
             </option>
-          )
+          ),
         )}
       </select>
       <br />
@@ -333,22 +433,17 @@ const InstanceConfigurationPage: NextPage = () => {
       <Label className="text-right">Quote calculation type</Label>
       <br />
       <select
+        value={config.quoteCalculationType}
         onChange={(e) =>
-          onInstanceConfigChange("quoteCalculationType", e.target.value)
+          setConfig({ ...config, quoteCalculationType: e.target.value })
         }
       >
         {instanceConfigOptionsResponse.data?.quoteCalculationType.map(
           (option) => (
-            <option
-              key={option}
-              value={option}
-              selected={
-                instanceConfigResponse.data?.quoteCalculationType === option
-              }
-            >
+            <option key={option} value={option}>
               {QUOTE_CALCULATION_TYPE_TO_HUMAN[option]}
             </option>
-          )
+          ),
         )}
       </select>
       <br />
@@ -356,22 +451,17 @@ const InstanceConfigurationPage: NextPage = () => {
       <Label className="text-right">Geo calculation type</Label>
       <br />
       <select
+        value={config.geoCalculationType}
         onChange={(e) =>
-          onInstanceConfigChange("geoCalculationType", e.target.value)
+          setConfig({ ...config, geoCalculationType: e.target.value })
         }
       >
         {instanceConfigOptionsResponse.data?.geoCalculationType.map(
           (option) => (
-            <option
-              key={option}
-              value={option}
-              selected={
-                instanceConfigResponse.data?.geoCalculationType === option
-              }
-            >
+            <option key={option} value={option}>
               {GEO_CALCULATION_TYPE_TO_HUMAN[option]}
             </option>
-          )
+          ),
         )}
       </select>
       <br />
@@ -379,26 +469,20 @@ const InstanceConfigurationPage: NextPage = () => {
       <Label className="text-right">Delivery duration calculation type</Label>
       <br />
       <select
+        value={config.deliveryDurationCalculationType}
         onChange={(e) =>
-          onInstanceConfigChange(
-            "deliveryDurationCalculationType",
-            e.target.value
-          )
+          setConfig({
+            ...config,
+            deliveryDurationCalculationType: e.target.value,
+          })
         }
       >
         {instanceConfigOptionsResponse.data?.deliveryDurationCalculationType.map(
           (option) => (
-            <option
-              key={option}
-              value={option}
-              selected={
-                instanceConfigResponse.data?.deliveryDurationCalculationType ===
-                option
-              }
-            >
+            <option key={option} value={option}>
               {DELIVERY_DURATION_CALCULATION_TYPE_TO_HUMAN[option]}
             </option>
-          )
+          ),
         )}
       </select>
       <br />
@@ -408,26 +492,20 @@ const InstanceConfigurationPage: NextPage = () => {
       </Label>
       <br />
       <select
+        value={config.courierCompensationCalculationType}
         onChange={(e) =>
-          onInstanceConfigChange(
-            "courierCompensationCalculationType",
-            e.target.value
-          )
+          setConfig({
+            ...config,
+            courierCompensationCalculationType: e.target.value,
+          })
         }
       >
         {instanceConfigOptionsResponse.data?.courierCompensationCalculationType.map(
           (option) => (
-            <option
-              key={option}
-              value={option}
-              selected={
-                instanceConfigResponse.data
-                  ?.courierCompensationCalculationType === option
-              }
-            >
+            <option key={option} value={option}>
               {COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN[option]}
             </option>
-          )
+          ),
         )}
       </select>
       <br />
@@ -435,24 +513,16 @@ const InstanceConfigurationPage: NextPage = () => {
       <Label className="text-right">Dietary restrictions</Label>
       <br />
       <select
+        value={config.defaultDietaryRestrictions}
         onChange={(e) => onInstanceConfigChangeDietaryRestrictions(e.target)}
         multiple
       >
         {instanceConfigOptionsResponse.data?.defaultDietaryRestrictions.map(
           (option) => (
-            <option
-              key={option}
-              value={option}
-              selected={
-                (
-                  instanceConfigResponse.data?.defaultDietaryRestrictions ??
-                  ([] as any)
-                ).indexOf(option) >= 0
-              }
-            >
+            <option key={option} value={option}>
               {COURIER_DIETARY_RESTRICTIONS_TO_HUMAN[option]}
             </option>
-          )
+          ),
         )}
       </select>
       <br />
@@ -460,14 +530,11 @@ const InstanceConfigurationPage: NextPage = () => {
       <Label className="text-right">Currency</Label>
       <br />
       <select
-        onChange={(e) => onInstanceConfigChange("currency", e.target.value)}
+        value={config.currency}
+        onChange={(e) => setConfig({ ...config, currency: e.target.value })}
       >
         {instanceConfigOptionsResponse.data?.currency.map((option) => (
-          <option
-            key={option}
-            value={option}
-            selected={instanceConfigResponse.data?.currency === option}
-          >
+          <option key={option} value={option}>
             {CURRENCY_TO_HUMAN[option]}
           </option>
         ))}
@@ -477,14 +544,11 @@ const InstanceConfigurationPage: NextPage = () => {
       <Label className="text-right">Distance unit</Label>
       <br />
       <select
-        onChange={(e) => onInstanceConfigChange("distanceUnit", e.target.value)}
+        value={config.distanceUnit}
+        onChange={(e) => setConfig({ ...config, distanceUnit: e.target.value })}
       >
         {instanceConfigOptionsResponse.data?.distanceUnit.map((option) => (
-          <option
-            key={option}
-            value={option}
-            selected={instanceConfigResponse.data?.distanceUnit === option}
-          >
+          <option key={option} value={option}>
             {DISTANCE_UNIT_TO_HUMAN[option]}
           </option>
         ))}
@@ -495,13 +559,15 @@ const InstanceConfigurationPage: NextPage = () => {
       <Input
         key="maxAssignmentDistance"
         type="number"
-        value={instanceConfigResponse.data?.maxAssignmentDistance ?? 0}
+        value={config.maxAssignmentDistance}
         onChange={(event) =>
-          onInstanceConfigChange("maxAssignmentDistance", event.target.value)
+          setConfig({
+            ...config,
+            maxAssignmentDistance: Number(event.target.value),
+          })
         }
-        className="max-w-[280px] pl-8"
+        className="max-w-[280px]"
       />
-      <br />
       <br />
       <Label className="text-right">
         Max drift distance (Maximum amount of distance that the quote and
@@ -510,67 +576,90 @@ const InstanceConfigurationPage: NextPage = () => {
       <Input
         key="maxDriftDistance"
         type="number"
-        value={instanceConfigResponse.data?.maxDriftDistance ?? 0}
+        value={config.maxDriftDistance}
         onChange={(event) =>
-          onInstanceConfigChange("maxDriftDistance", event.target.value)
+          setConfig({ ...config, maxDriftDistance: Number(event.target.value) })
         }
-        className="max-w-[280px] pl-8"
+        className="max-w-[280px]"
       />
       <br />
       <Label className="text-right">Quote expiration minutes</Label>
       <Input
         key="quoteExpirationMinutes"
         type="number"
-        value={instanceConfigResponse.data?.quoteExpirationMinutes ?? 0}
+        value={config.quoteExpirationMinutes}
         onChange={(event) =>
-          onInstanceConfigChange("quoteExpirationMinutes", event.target.value)
+          setConfig({
+            ...config,
+            quoteExpirationMinutes: Number(event.target.value),
+          })
         }
-        className="max-w-[280px] pl-8"
+        className="max-w-[280px]"
       />
       <br />
       <Label className="text-right">Default courier pay rate</Label>
       <Input
         key="defaultCourierPayRate"
         type="number"
-        value={instanceConfigResponse.data?.defaultCourierPayRate ?? 0}
+        value={config.defaultCourierPayRate}
         onChange={(event) =>
-          onInstanceConfigChange("defaultCourierPayRate", event.target.value)
+          setConfig({
+            ...config,
+            defaultCourierPayRate: Number(event.target.value),
+          })
         }
-        className="max-w-[280px] pl-8"
+        className="max-w-[280px]"
       />
       <br />
       <Label className="text-right">Default minimum courier pay</Label>
       <Input
         key="defaultMinimumCourierPay"
         type="number"
-        value={instanceConfigResponse.data?.defaultMinimumCourierPay ?? 0}
+        value={config.defaultMinimumCourierPay}
         onChange={(event) =>
-          onInstanceConfigChange("defaultMinimumCourierPay", event.target.value)
+          setConfig({
+            ...config,
+            defaultMinimumCourierPay: Number(event.target.value),
+          })
         }
-        className="max-w-[280px] pl-8"
+        className="max-w-[280px]"
       />
       <br />
       <Label className="text-right">Default max working hours</Label>
       <Input
         key="defaultMaxWorkingHours"
         type="number"
-        value={instanceConfigResponse.data?.defaultMaxWorkingHours ?? 0}
+        value={config.defaultMaxWorkingHours}
         onChange={(event) =>
-          onInstanceConfigChange("defaultMaxWorkingHours", event.target.value)
+          setConfig({
+            ...config,
+            defaultMaxWorkingHours: Number(event.target.value),
+          })
         }
-        className="max-w-[280px] pl-8"
+        className="max-w-[280px]"
       />
       <br />
       <Label className="text-right">Fee percentage amount</Label>
       <Input
         key="feePercentageAmount"
         type="number"
-        value={instanceConfigResponse.data?.feePercentageAmount ?? 0}
+        value={config.feePercentageAmount}
         onChange={(event) =>
-          onInstanceConfigChange("feePercentageAmount", event.target.value)
+          setConfig({
+            ...config,
+            feePercentageAmount: Number(event.target.value),
+          })
         }
-        className="max-w-[280px] pl-8"
+        className="max-w-[280px]"
       />
+      <br />
+      <button
+        onClick={handleSaveAllChanges}
+        disabled={isSaving}
+        className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isSaving ? "Saving..." : "Save All Changes"}
+      </button>
     </DefaultLayout>
   );
 };
