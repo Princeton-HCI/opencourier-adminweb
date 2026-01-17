@@ -22,7 +22,7 @@ const iconFix = () => {
   });
 };
 
-const circleToPolygon = (circle: L.Circle, points = 64) => {
+const circleToPolygon = (circle: L.Circle, points = 32) => {
   const center = circle.getLatLng();
   const radius = circle.getRadius(); // in meters
   const coords: [number, number][] = [];
@@ -52,12 +52,63 @@ const circleToPolygon = (circle: L.Circle, points = 64) => {
 const GeomanControls = ({
   onUpdate,
   featureGroupRef,
+  initialGeoJSON,
 }: {
   onUpdate: (geojson: any) => void;
   featureGroupRef: React.RefObject<L.FeatureGroup>;
+  initialGeoJSON?: any;
 }) => {
   const map = useMap();
   const isMounted = useRef(false);
+  const lastLoadedDataRef = useRef<string | null>(null);
+
+  const updateAllLayers = () => {
+    const layers = featureGroupRef.current?.getLayers() ?? [];
+    const geojson = layers.map((l: any) => {
+      if (l instanceof L.Circle) return circleToPolygon(l);
+      else return l.toGeoJSON(); // Polygon/Rectangle
+    });
+    onUpdate(geojson.length > 0 ? geojson : null);
+  };
+
+  // Load initial GeoJSON data
+  useEffect(() => {
+    if (!initialGeoJSON || !featureGroupRef.current) return;
+
+    // Check if this is the same data we already loaded
+    const dataString = JSON.stringify(initialGeoJSON);
+    if (lastLoadedDataRef.current === dataString) return;
+    lastLoadedDataRef.current = dataString;
+
+    console.log("Loading initial GeoJSON:", initialGeoJSON);
+
+    try {
+      // Clear existing layers
+      featureGroupRef.current.clearLayers();
+
+      // Convert initial data to Leaflet layers and add to feature group
+      const geoJsonLayer = L.geoJSON(initialGeoJSON);
+      geoJsonLayer.eachLayer((layer: any) => {
+        featureGroupRef.current?.addLayer(layer);
+
+        // Set up event listeners for editing (but don't enable edit mode yet)
+        if (layer.pm) {
+          layer.on("pm:edit", updateAllLayers);
+          layer.on("pm:remove", updateAllLayers);
+        }
+      });
+
+      // Fit bounds without animation to avoid timing issues
+      if (featureGroupRef.current) {
+        const bounds = featureGroupRef.current.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], animate: false });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading initial GeoJSON:", error);
+    }
+  }, [initialGeoJSON, featureGroupRef, map]);
 
   useEffect(() => {
     if (isMounted.current) return;
@@ -65,7 +116,6 @@ const GeomanControls = ({
 
     // Initialize Geoman
     // @ts-ignore
-
     map.pm.addControls({
       position: "topleft",
       drawCircle: true, // keep if you want regular circles
@@ -79,15 +129,6 @@ const GeomanControls = ({
       dragMode: true,
       removalMode: true,
     });
-
-    const updateAllLayers = () => {
-      const layers = featureGroupRef.current?.getLayers() ?? [];
-      const geojson = layers.map((l: any) => {
-        if (l instanceof L.Circle) return circleToPolygon(l);
-        else return l.toGeoJSON(); // Polygon/Rectangle
-      });
-      onUpdate(geojson.length > 0 ? geojson : null);
-    };
 
     // When a new layer is created
     map.on("pm:create", (e: any) => {
@@ -144,7 +185,11 @@ export default function Map({ onUpdate, initialGeoJSON }: MapProps) {
         />
 
         <FeatureGroup ref={featureGroupRef} />
-        <GeomanControls onUpdate={onUpdate} featureGroupRef={featureGroupRef} />
+        <GeomanControls
+          onUpdate={onUpdate}
+          featureGroupRef={featureGroupRef}
+          initialGeoJSON={initialGeoJSON}
+        />
       </MapContainer>
     </div>
   );

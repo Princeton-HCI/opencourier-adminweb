@@ -34,8 +34,17 @@ import {
 } from "@/admin-web-components/components/molecules/modal";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { union, featureCollection } from "@turf/turf";
+
+const AdminMap = dynamic(() => import("@/components/Map"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[480px] w-full bg-gray-100 animate-pulse rounded-lg">
+      Loading Map...
+    </div>
+  ),
+});
 
 const InstanceConfigurationPage: NextPage = () => {
   const instanceConfigOptionsResponse = useGetInstanceConfigOptionsQuery({});
@@ -61,6 +70,7 @@ const InstanceConfigurationPage: NextPage = () => {
   const [config, setConfig] = useState({
     name: "",
     imageURL: "",
+    region: null,
     courierMatcherType: "",
     quoteCalculationType: "",
     geoCalculationType: "",
@@ -86,6 +96,7 @@ const InstanceConfigurationPage: NextPage = () => {
       setConfig({
         name: metadata.name ?? "",
         imageURL: metadata.imageURL ?? "",
+        region: metadata.region ?? null,
         courierMatcherType: data.courierMatcherType ?? "",
         quoteCalculationType: data.quoteCalculationType ?? "",
         geoCalculationType: data.geoCalculationType ?? "",
@@ -111,42 +122,6 @@ const InstanceConfigurationPage: NextPage = () => {
     }
   }, [instanceConfigResponse.data]);
 
-  const handleSaveRegion = () => {
-    const rawData = regionDataRef.current;
-
-    // 1. Safety Checks
-    if (!rawData) {
-      console.warn("No region data found");
-      return;
-    }
-
-    // 2. Normalize Data: Ensure we have a FeatureCollection
-    // The Map component might return an Array [] or a FeatureCollection object {}
-    let collection;
-
-    if (Array.isArray(rawData)) {
-      // If it's just an array of polygons, wrap them
-      collection = featureCollection(rawData);
-    } else if (rawData.type === "FeatureCollection") {
-      // It's already formatted correctly
-      collection = rawData;
-    }
-
-    if (collection.features.length > 1) {
-      try {
-        const mergedGeoJSON = union(collection);
-        console.log("Saving merged region:", mergedGeoJSON);
-
-        // Send to backend
-        // await setInstanceConfigMutation({ operatingRegion: mergedGeoJSON });
-      } catch (error) {
-        console.error("Turf merge failed:", error);
-      }
-    } else {
-      console.log(collection.features[0]);
-    }
-  };
-
   const onInstanceConfigChangeDietaryRestrictions = (select: any) => {
     const result = [];
     const options = select && select.options;
@@ -165,15 +140,38 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveAllChanges = async () => {
     setIsSaving(true);
     try {
-      const { name, imageURL, ...restConfig } = config;
+      const { name, imageURL, region, ...restConfig } = config;
       const existingMetadata =
         (instanceConfigResponse.data?.metadata as any) || {};
+
+      // Process region data - keep as FeatureCollection for individual polygon editing
+      let processedRegion = null;
+      const rawData = regionDataRef.current;
+
+      // If regionDataRef is null, use the existing region from config (no changes made)
+      if (!rawData && region) {
+        processedRegion = region;
+      } else if (rawData) {
+        // Normalize Data: Ensure we have a FeatureCollection
+        if (Array.isArray(rawData)) {
+          // If it's just an array of features, wrap them in a FeatureCollection
+          processedRegion = featureCollection(rawData);
+        } else if (rawData.type === "FeatureCollection") {
+          // It's already formatted correctly
+          processedRegion = rawData;
+        } else if (rawData.type === "Feature") {
+          // Single feature, wrap it in a FeatureCollection
+          processedRegion = featureCollection([rawData]);
+        }
+      }
+
       await setInstanceConfigMutation({
         ...restConfig,
         metadata: {
           ...existingMetadata,
           name,
           imageURL,
+          region: processedRegion,
         },
       } as any);
       toast({
@@ -196,14 +194,10 @@ const InstanceConfigurationPage: NextPage = () => {
     console.log(data);
   };
 
-  const AdminMap = dynamic(() => import("@/components/Map"), {
-    ssr: false,
-    loading: () => (
-      <div className="h-[480px] w-full bg-gray-100 animate-pulse rounded-lg">
-        Loading Map...
-      </div>
-    ),
-  });
+  // Memoize the onUpdate callback to prevent map re-renders
+  const handleMapUpdate = useCallback((val: any) => {
+    regionDataRef.current = val;
+  }, []);
 
   return (
     <DefaultLayout>
@@ -364,299 +358,318 @@ const InstanceConfigurationPage: NextPage = () => {
           </Label>
         </Link>
       </div>
-      <br />
-      <Label className="text-right">Operating Region</Label>
-      <br />
-      <div className="pt-2 max-w-4xl">
-        {/* 2. Render Map */}
-        <div className="mb-2">
-          <AdminMap
-            onUpdate={(val) => {
-              regionDataRef.current = val; // store latest GeoJSON
-            }}
+      <div className="pt-4 flex flex-col gap-2">
+        <div>
+          <Label className="text-right">Instance name</Label>
+          <Input
+            key="instanceName"
+            type="text"
+            value={config.name}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                name: event.target.value,
+              })
+            }
+            className="max-w-[280px]"
           />
         </div>
-        <button
-          onClick={handleSaveRegion}
-          className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700"
-        >
-          Save Region
-        </button>
+        <div>
+          <Label className="text-right">Instance image URL</Label>
+          <Input
+            key="imageURL"
+            type="text"
+            value={config.imageURL}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                imageURL: event.target.value,
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
+        <div>
+          <Label className="text-right">Operating Region</Label>
+          <div className="pt-2 max-w-4xl">
+            <AdminMap
+              initialGeoJSON={config.region}
+              onUpdate={handleMapUpdate}
+            />
+          </div>
+        </div>
+        <div>
+          <Label className="text-right">Courier matcher type</Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.courierMatcherType}
+            onChange={(e) =>
+              setConfig({ ...config, courierMatcherType: e.target.value })
+            }
+          >
+            {instanceConfigOptionsResponse.data?.courierMatcherType.map(
+              (option) => (
+                <option key={option} value={option}>
+                  {COURIER_MATCHER_TYPE_TO_HUMAN[option]}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">Quote calculation type</Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.quoteCalculationType}
+            onChange={(e) =>
+              setConfig({ ...config, quoteCalculationType: e.target.value })
+            }
+          >
+            {instanceConfigOptionsResponse.data?.quoteCalculationType.map(
+              (option) => (
+                <option key={option} value={option}>
+                  {QUOTE_CALCULATION_TYPE_TO_HUMAN[option]}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">Geo calculation type</Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.geoCalculationType}
+            onChange={(e) =>
+              setConfig({ ...config, geoCalculationType: e.target.value })
+            }
+          >
+            {instanceConfigOptionsResponse.data?.geoCalculationType.map(
+              (option) => (
+                <option key={option} value={option}>
+                  {GEO_CALCULATION_TYPE_TO_HUMAN[option]}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">
+            Delivery duration calculation type
+          </Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.deliveryDurationCalculationType}
+            onChange={(e) =>
+              setConfig({
+                ...config,
+                deliveryDurationCalculationType: e.target.value,
+              })
+            }
+          >
+            {instanceConfigOptionsResponse.data?.deliveryDurationCalculationType.map(
+              (option) => (
+                <option key={option} value={option}>
+                  {DELIVERY_DURATION_CALCULATION_TYPE_TO_HUMAN[option]}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">
+            Courier compensation calculation type
+          </Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.courierCompensationCalculationType}
+            onChange={(e) =>
+              setConfig({
+                ...config,
+                courierCompensationCalculationType: e.target.value,
+              })
+            }
+          >
+            {instanceConfigOptionsResponse.data?.courierCompensationCalculationType.map(
+              (option) => (
+                <option key={option} value={option}>
+                  {COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN[option]}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">
+            Dietary restrictions (select multiple)
+          </Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.defaultDietaryRestrictions}
+            onChange={(e) =>
+              onInstanceConfigChangeDietaryRestrictions(e.target)
+            }
+            multiple
+          >
+            {instanceConfigOptionsResponse.data?.defaultDietaryRestrictions.map(
+              (option) => (
+                <option key={option} value={option}>
+                  {COURIER_DIETARY_RESTRICTIONS_TO_HUMAN[option]}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">Currency</Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.currency}
+            onChange={(e) => setConfig({ ...config, currency: e.target.value })}
+          >
+            {instanceConfigOptionsResponse.data?.currency.map((option) => (
+              <option key={option} value={option}>
+                {CURRENCY_TO_HUMAN[option]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">Distance unit</Label>
+          <br />
+          <select
+            className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={config.distanceUnit}
+            onChange={(e) =>
+              setConfig({ ...config, distanceUnit: e.target.value })
+            }
+          >
+            {instanceConfigOptionsResponse.data?.distanceUnit.map((option) => (
+              <option key={option} value={option}>
+                {DISTANCE_UNIT_TO_HUMAN[option]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-right">Max assignment distance</Label>
+          <Input
+            key="maxAssignmentDistance"
+            type="number"
+            value={config.maxAssignmentDistance}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                maxAssignmentDistance: Number(event.target.value),
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
+        <div>
+          <Label className="text-right">
+            Max drift distance (Maximum amount of distance that the quote and
+            delivery pickup can differ in metres)
+          </Label>
+          <Input
+            key="maxDriftDistance"
+            type="number"
+            value={config.maxDriftDistance}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                maxDriftDistance: Number(event.target.value),
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
+        <div>
+          <Label className="text-right">Quote expiration minutes</Label>
+          <Input
+            key="quoteExpirationMinutes"
+            type="number"
+            value={config.quoteExpirationMinutes}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                quoteExpirationMinutes: Number(event.target.value),
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
+        <div>
+          <Label className="text-right">Default courier pay rate</Label>
+          <Input
+            key="defaultCourierPayRate"
+            type="number"
+            value={config.defaultCourierPayRate}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                defaultCourierPayRate: Number(event.target.value),
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
+        <div>
+          <Label className="text-right">Default minimum courier pay</Label>
+          <Input
+            key="defaultMinimumCourierPay"
+            type="number"
+            value={config.defaultMinimumCourierPay}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                defaultMinimumCourierPay: Number(event.target.value),
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
+        <div>
+          <Label className="text-right">Default max working hours</Label>
+          <Input
+            key="defaultMaxWorkingHours"
+            type="number"
+            value={config.defaultMaxWorkingHours}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                defaultMaxWorkingHours: Number(event.target.value),
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
+        <div>
+          <Label className="text-right">Fee percentage amount</Label>
+          <Input
+            key="feePercentageAmount"
+            type="number"
+            value={config.feePercentageAmount}
+            onChange={(event) =>
+              setConfig({
+                ...config,
+                feePercentageAmount: Number(event.target.value),
+              })
+            }
+            className="max-w-[280px]"
+          />
+        </div>
       </div>
-      <br />
-      <Label className="text-right">Instance name</Label>
-      <Input
-        key="instanceName"
-        type="text"
-        value={config.name}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            name: event.target.value,
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">Instance image URL</Label>
-      <Input
-        key="imageURL"
-        type="text"
-        value={config.imageURL}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            imageURL: event.target.value,
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">Courier matcher type</Label>
-      <br />
-      <select
-        value={config.courierMatcherType}
-        onChange={(e) =>
-          setConfig({ ...config, courierMatcherType: e.target.value })
-        }
-      >
-        {instanceConfigOptionsResponse.data?.courierMatcherType.map(
-          (option) => (
-            <option key={option} value={option}>
-              {COURIER_MATCHER_TYPE_TO_HUMAN[option]}
-            </option>
-          ),
-        )}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">Quote calculation type</Label>
-      <br />
-      <select
-        value={config.quoteCalculationType}
-        onChange={(e) =>
-          setConfig({ ...config, quoteCalculationType: e.target.value })
-        }
-      >
-        {instanceConfigOptionsResponse.data?.quoteCalculationType.map(
-          (option) => (
-            <option key={option} value={option}>
-              {QUOTE_CALCULATION_TYPE_TO_HUMAN[option]}
-            </option>
-          ),
-        )}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">Geo calculation type</Label>
-      <br />
-      <select
-        value={config.geoCalculationType}
-        onChange={(e) =>
-          setConfig({ ...config, geoCalculationType: e.target.value })
-        }
-      >
-        {instanceConfigOptionsResponse.data?.geoCalculationType.map(
-          (option) => (
-            <option key={option} value={option}>
-              {GEO_CALCULATION_TYPE_TO_HUMAN[option]}
-            </option>
-          ),
-        )}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">Delivery duration calculation type</Label>
-      <br />
-      <select
-        value={config.deliveryDurationCalculationType}
-        onChange={(e) =>
-          setConfig({
-            ...config,
-            deliveryDurationCalculationType: e.target.value,
-          })
-        }
-      >
-        {instanceConfigOptionsResponse.data?.deliveryDurationCalculationType.map(
-          (option) => (
-            <option key={option} value={option}>
-              {DELIVERY_DURATION_CALCULATION_TYPE_TO_HUMAN[option]}
-            </option>
-          ),
-        )}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">
-        Courier compensation calculation type
-      </Label>
-      <br />
-      <select
-        value={config.courierCompensationCalculationType}
-        onChange={(e) =>
-          setConfig({
-            ...config,
-            courierCompensationCalculationType: e.target.value,
-          })
-        }
-      >
-        {instanceConfigOptionsResponse.data?.courierCompensationCalculationType.map(
-          (option) => (
-            <option key={option} value={option}>
-              {COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN[option]}
-            </option>
-          ),
-        )}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">Dietary restrictions</Label>
-      <br />
-      <select
-        value={config.defaultDietaryRestrictions}
-        onChange={(e) => onInstanceConfigChangeDietaryRestrictions(e.target)}
-        multiple
-      >
-        {instanceConfigOptionsResponse.data?.defaultDietaryRestrictions.map(
-          (option) => (
-            <option key={option} value={option}>
-              {COURIER_DIETARY_RESTRICTIONS_TO_HUMAN[option]}
-            </option>
-          ),
-        )}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">Currency</Label>
-      <br />
-      <select
-        value={config.currency}
-        onChange={(e) => setConfig({ ...config, currency: e.target.value })}
-      >
-        {instanceConfigOptionsResponse.data?.currency.map((option) => (
-          <option key={option} value={option}>
-            {CURRENCY_TO_HUMAN[option]}
-          </option>
-        ))}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">Distance unit</Label>
-      <br />
-      <select
-        value={config.distanceUnit}
-        onChange={(e) => setConfig({ ...config, distanceUnit: e.target.value })}
-      >
-        {instanceConfigOptionsResponse.data?.distanceUnit.map((option) => (
-          <option key={option} value={option}>
-            {DISTANCE_UNIT_TO_HUMAN[option]}
-          </option>
-        ))}
-      </select>
-      <br />
-      <br />
-      <Label className="text-right">Max assignment distance</Label>
-      <Input
-        key="maxAssignmentDistance"
-        type="number"
-        value={config.maxAssignmentDistance}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            maxAssignmentDistance: Number(event.target.value),
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">
-        Max drift distance (Maximum amount of distance that the quote and
-        delivery pickup can differ in metres)
-      </Label>
-      <Input
-        key="maxDriftDistance"
-        type="number"
-        value={config.maxDriftDistance}
-        onChange={(event) =>
-          setConfig({ ...config, maxDriftDistance: Number(event.target.value) })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">Quote expiration minutes</Label>
-      <Input
-        key="quoteExpirationMinutes"
-        type="number"
-        value={config.quoteExpirationMinutes}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            quoteExpirationMinutes: Number(event.target.value),
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">Default courier pay rate</Label>
-      <Input
-        key="defaultCourierPayRate"
-        type="number"
-        value={config.defaultCourierPayRate}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            defaultCourierPayRate: Number(event.target.value),
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">Default minimum courier pay</Label>
-      <Input
-        key="defaultMinimumCourierPay"
-        type="number"
-        value={config.defaultMinimumCourierPay}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            defaultMinimumCourierPay: Number(event.target.value),
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">Default max working hours</Label>
-      <Input
-        key="defaultMaxWorkingHours"
-        type="number"
-        value={config.defaultMaxWorkingHours}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            defaultMaxWorkingHours: Number(event.target.value),
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
-      <Label className="text-right">Fee percentage amount</Label>
-      <Input
-        key="feePercentageAmount"
-        type="number"
-        value={config.feePercentageAmount}
-        onChange={(event) =>
-          setConfig({
-            ...config,
-            feePercentageAmount: Number(event.target.value),
-          })
-        }
-        className="max-w-[280px]"
-      />
-      <br />
       <button
         onClick={handleSaveAllChanges}
         disabled={isSaving}
-        className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="mt-4 bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSaving ? "Saving..." : "Save All Changes"}
       </button>
