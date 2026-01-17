@@ -47,6 +47,16 @@ const AdminMap = dynamic(() => import("@/components/Map"), {
   ),
 });
 
+const validateURL = (url: string): boolean => {
+  if (!url) return true; // Allow empty fields
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const InstanceConfigurationPage: NextPage = () => {
   const instanceConfigOptionsResponse = useGetInstanceConfigOptionsQuery({});
   const instanceConfigResponse = useGetInstanceConfigQuery({});
@@ -54,6 +64,11 @@ const InstanceConfigurationPage: NextPage = () => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const hostname = window.location.origin;
+  const [urlErrors, setUrlErrors] = useState<{
+    link?: string;
+    websocketLink?: string;
+    imageURL?: string;
+  }>({});
   const form = useForm({
     defaultValues: {
       name: "",
@@ -163,9 +178,11 @@ const InstanceConfigurationPage: NextPage = () => {
       await setInstanceConfigMutation({
         metadata: {
           ...existingMetadata,
-          privacyPolicyContent,
+          privacyPolicyContent: privacyPolicyContent.trim(),
         },
       } as any);
+      // PRINT OUT DATA!
+      console.log(config);
       toast({
         title: "Success!",
         description: "Privacy policy saved successfully.",
@@ -192,13 +209,15 @@ const InstanceConfigurationPage: NextPage = () => {
       await setInstanceConfigMutation({
         metadata: {
           ...existingMetadata,
-          termsOfServiceContent,
+          termsOfServiceContent: termsOfServiceContent.trim(),
         },
       } as any);
       toast({
         title: "Success!",
         description: "Terms of service saved successfully.",
       });
+      // PRINT OUT DATA!
+      console.log(config);
       setCurrentView("main");
     } catch (error) {
       toast({
@@ -221,13 +240,15 @@ const InstanceConfigurationPage: NextPage = () => {
       await setInstanceConfigMutation({
         metadata: {
           ...existingMetadata,
-          rulesContent,
+          rulesContent: rulesContent.trim(),
         },
       } as any);
       toast({
         title: "Success!",
         description: "Rules saved successfully.",
       });
+      // PRINT OUT DATA!
+      console.log(config);
       setCurrentView("main");
     } catch (error) {
       toast({
@@ -250,13 +271,15 @@ const InstanceConfigurationPage: NextPage = () => {
       await setInstanceConfigMutation({
         metadata: {
           ...existingMetadata,
-          descriptionContent,
+          descriptionContent: descriptionContent.trim(),
         },
       } as any);
       toast({
         title: "Success!",
         description: "Description saved successfully.",
       });
+      // PRINT OUT DATA!
+      console.log(config);
       setCurrentView("main");
     } catch (error) {
       toast({
@@ -303,18 +326,19 @@ const InstanceConfigurationPage: NextPage = () => {
         ...restConfig,
         metadata: {
           ...existingMetadata,
-          name,
-          link,
-          websocketLink,
-          imageURL,
+          name: name.trim(),
+          link: link.trim(),
+          websocketLink: websocketLink.trim(),
+          imageURL: imageURL.trim(),
           region: processedRegion,
-          privacyPolicyContent,
         },
       } as any);
       toast({
         title: "Success!",
         description: "Instance configuration saved successfully.",
       });
+      // PRINT OUT DATA!
+      console.log(config);
     } catch (error) {
       toast({
         title: "Error",
@@ -335,6 +359,20 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleMapUpdate = useCallback((val: any) => {
     regionDataRef.current = val;
   }, []);
+
+  const handleURLFieldChange = (
+    field: "link" | "websocketLink" | "imageURL",
+    value: string,
+  ) => {
+    setConfig({ ...config, [field]: value });
+    if (value && !validateURL(value)) {
+      setUrlErrors({ ...urlErrors, [field]: "Invalid URL format" });
+    } else {
+      const newErrors = { ...urlErrors };
+      delete newErrors[field];
+      setUrlErrors(newErrors);
+    }
+  };
 
   return (
     <DefaultLayout>
@@ -525,7 +563,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     name: event.target.value,
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[500px]"
               />
             </div>
             <div>
@@ -535,13 +573,15 @@ const InstanceConfigurationPage: NextPage = () => {
                 type="text"
                 value={config.link}
                 onChange={(event) =>
-                  setConfig({
-                    ...config,
-                    link: event.target.value,
-                  })
+                  handleURLFieldChange("link", event.target.value)
                 }
-                className="max-w-[280px]"
+                className={`max-w-[500px] ${
+                  urlErrors.link ? "border-red-500 border-2" : ""
+                }`}
               />
+              {urlErrors.link && (
+                <p className="text-red-500 text-sm mt-1">{urlErrors.link}</p>
+              )}
             </div>
             <div>
               <Label className="text-right">Websocket link</Label>
@@ -550,13 +590,17 @@ const InstanceConfigurationPage: NextPage = () => {
                 type="text"
                 value={config.websocketLink}
                 onChange={(event) =>
-                  setConfig({
-                    ...config,
-                    websocketLink: event.target.value,
-                  })
+                  handleURLFieldChange("websocketLink", event.target.value)
                 }
-                className="max-w-[280px]"
+                className={`max-w-[500px] ${
+                  urlErrors.websocketLink ? "border-red-500 border-2" : ""
+                }`}
               />
+              {urlErrors.websocketLink && (
+                <p className="text-red-500 text-sm mt-1">
+                  {urlErrors.websocketLink}
+                </p>
+              )}
             </div>
             <div>
               <Label className="text-right">Logo Image URL</Label>
@@ -565,13 +609,17 @@ const InstanceConfigurationPage: NextPage = () => {
                 type="text"
                 value={config.imageURL}
                 onChange={(event) =>
-                  setConfig({
-                    ...config,
-                    imageURL: event.target.value,
-                  })
+                  handleURLFieldChange("imageURL", event.target.value)
                 }
-                className="max-w-[280px]"
+                className={`max-w-[500px] ${
+                  urlErrors.imageURL ? "border-red-500 border-2" : ""
+                }`}
               />
+              {urlErrors.imageURL && (
+                <p className="text-red-500 text-sm mt-1">
+                  {urlErrors.imageURL}
+                </p>
+              )}
             </div>
             <div>
               <Label className="text-right">Operating region</Label>
@@ -757,7 +805,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     maxAssignmentDistance: Number(event.target.value),
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[120px]"
               />
             </div>
             <div>
@@ -775,7 +823,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     maxDriftDistance: Number(event.target.value),
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[120px]"
               />
             </div>
             <div>
@@ -790,7 +838,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     quoteExpirationMinutes: Number(event.target.value),
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[120px]"
               />
             </div>
             <div>
@@ -805,7 +853,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     defaultCourierPayRate: Number(event.target.value),
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[120px]"
               />
             </div>
             <div>
@@ -820,7 +868,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     defaultMinimumCourierPay: Number(event.target.value),
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[120px]"
               />
             </div>
             <div>
@@ -835,7 +883,7 @@ const InstanceConfigurationPage: NextPage = () => {
                     defaultMaxWorkingHours: Number(event.target.value),
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[120px]"
               />
             </div>
             <div>
@@ -850,13 +898,13 @@ const InstanceConfigurationPage: NextPage = () => {
                     feePercentageAmount: Number(event.target.value),
                   })
                 }
-                className="max-w-[280px]"
+                className="max-w-[120px]"
               />
             </div>
           </div>
           <button
             onClick={handleSaveAllChanges}
-            disabled={isSaving}
+            disabled={isSaving || Object.keys(urlErrors).length > 0}
             className="mt-4 bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Saving..." : "Save All Changes"}
