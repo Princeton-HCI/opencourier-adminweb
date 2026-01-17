@@ -341,7 +341,7 @@ const InstanceConfigurationPage: NextPage = () => {
       {/* Header and Edit Links - Always Visible */}
       <div className="flex justify-between">
         <h2 className="text-3xl font-medium tracking-tight pb-1">
-          Instance configuration
+          Instance Configuration
         </h2>
         {currentView === "main" && (
           <button
@@ -870,7 +870,7 @@ const InstanceConfigurationPage: NextPage = () => {
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
-              <div className="mb-6">
+              <div className="mb-1">
                 <Label className="block text-sm font-medium text-gray-900 mb-2">
                   Content (Markdown)
                 </Label>
@@ -925,7 +925,7 @@ const InstanceConfigurationPage: NextPage = () => {
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
-              <div className="mb-6">
+              <div className="mb-1">
                 <Label className="block text-sm font-medium text-gray-900 mb-2">
                   Content (Markdown)
                 </Label>
@@ -980,7 +980,7 @@ const InstanceConfigurationPage: NextPage = () => {
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
-              <div className="mb-6">
+              <div className="mb-1">
                 <Label className="block text-sm font-medium text-gray-900 mb-2">
                   Content (Markdown)
                 </Label>
@@ -1035,7 +1035,7 @@ const InstanceConfigurationPage: NextPage = () => {
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
-              <div className="mb-6">
+              <div className="mb-1">
                 <Label className="block text-sm font-medium text-gray-900 mb-2">
                   Content (Markdown)
                 </Label>
