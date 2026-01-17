@@ -173,7 +173,7 @@ export default function Map({ onUpdate, initialGeoJSON }: MapProps) {
   const featureGroupRef = useRef<L.FeatureGroup>(null);
 
   return (
-    <div className="h-[480px] w-full rounded-lg overflow-hidden border border-gray-300 relative z-0">
+    <div className="h-[400px] w-4/5 rounded-lg overflow-hidden border border-gray-300 relative z-0">
       <MapContainer
         center={[40.344, -74.6514]} // Default: Princeton, NJ
         zoom={14}

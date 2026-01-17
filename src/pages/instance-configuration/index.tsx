@@ -40,7 +40,7 @@ import { union, featureCollection } from "@turf/turf";
 const AdminMap = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => (
-    <div className="h-[480px] w-full bg-gray-100 animate-pulse rounded-lg">
+    <div className="h-[400px] w-4/5 bg-gray-100 animate-pulse rounded-lg items-center justify-center flex">
       Loading Map...
     </div>
   ),
@@ -349,8 +349,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </Label>
         </Link>
         <Link
-          href="/privacypolicy.html"
-          target="_blank"
+          href="/privacy-policy"
           className="text-gray-500 cursor-pointer hover:text-gray-800"
         >
           <Label className="text-right cursor-pointer">
@@ -505,7 +504,7 @@ const InstanceConfigurationPage: NextPage = () => {
         </div>
         <div>
           <Label className="text-right">
-            Dietary restrictions (select multiple)
+            Dietary restrictions (Select multiple)
           </Label>
           <br />
           <select
