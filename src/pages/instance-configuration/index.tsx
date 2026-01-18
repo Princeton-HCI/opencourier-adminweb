@@ -317,6 +317,21 @@ const InstanceConfigurationPage: NextPage = () => {
       const existingMetadata =
         (instanceConfigResponse.data?.metadata as any) || {};
 
+      // Sanitize and trim URL fields
+      const sanitizedName = name.trim();
+      const sanitizedLink = sanitizeURL(link.trim());
+      const sanitizedWebsocketLink = sanitizeURL(websocketLink.trim());
+      const sanitizedImageURL = sanitizeURL(imageURL.trim());
+
+      // Update config state with sanitized values
+      setConfig({
+        ...config,
+        name: sanitizedName,
+        link: sanitizedLink,
+        websocketLink: sanitizedWebsocketLink,
+        imageURL: sanitizedImageURL,
+      });
+
       // Process region data - keep as FeatureCollection for individual polygon editing
       let processedRegion = null;
       const rawData = regionDataRef.current;
@@ -342,10 +357,10 @@ const InstanceConfigurationPage: NextPage = () => {
         ...restConfig,
         metadata: {
           ...existingMetadata,
-          name: name.trim(),
-          link: sanitizeURL(link.trim()),
-          websocketLink: sanitizeURL(websocketLink.trim()),
-          imageURL: imageURL.trim(),
+          name: sanitizedName,
+          link: sanitizedLink,
+          websocketLink: sanitizedWebsocketLink,
+          imageURL: sanitizedImageURL,
           privacyPolicyUrl: computedURLs.privacyPolicyUrl,
           termsOfServiceUrl: computedURLs.termsOfServiceUrl,
           rulesUrl: computedURLs.rulesUrl,
@@ -400,9 +415,8 @@ const InstanceConfigurationPage: NextPage = () => {
     field: "link" | "websocketLink" | "imageURL",
     value: string,
   ) => {
-    const sanitizedValue = sanitizeURL(value);
-    setConfig({ ...config, [field]: sanitizedValue });
-    if (sanitizedValue && !validateURL(sanitizedValue)) {
+    setConfig({ ...config, [field]: value });
+    if (value && !validateURL(value)) {
       setUrlErrors({ ...urlErrors, [field]: "Invalid URL format" });
     } else {
       const newErrors = { ...urlErrors };
@@ -604,7 +618,11 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Domain link</Label>
+              <Label className="text-right">URL</Label>
+              <p className="text-sm text-gray-600 mb-1">
+                (Warning: Once the URL is saved, it cannot be changed. Please
+                ensure it is correct before saving.)
+              </p>
               <Input
                 key="link"
                 type="text"
@@ -612,8 +630,15 @@ const InstanceConfigurationPage: NextPage = () => {
                 onChange={(event) =>
                   handleURLFieldChange("link", event.target.value)
                 }
+                disabled={
+                  !!(instanceConfigResponse.data?.metadata as any)?.link
+                }
                 className={`max-w-[500px] ${
                   urlErrors.link ? "border-red-500 border-2" : ""
+                } ${
+                  !!(instanceConfigResponse.data?.metadata as any)?.link
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : ""
                 }`}
               />
               {urlErrors.link && (
@@ -621,7 +646,7 @@ const InstanceConfigurationPage: NextPage = () => {
               )}
             </div>
             <div>
-              <Label className="text-right">Websocket link</Label>
+              <Label className="text-right">Websocket URL</Label>
               <Input
                 key="websocketLink"
                 type="text"
@@ -773,10 +798,8 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">
-                Dietary restrictions (Select multiple)
-              </Label>
-              <br />
+              <Label className="text-right">Dietary restrictions</Label>
+              <p className="text-sm text-gray-600 mb-1">(Select multiple)</p>
               <select
                 className="border-[1px] border-input rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={config.defaultDietaryRestrictions}
@@ -846,10 +869,11 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">
-                Max drift distance (Maximum amount of distance that the quote
-                and delivery pickup can differ in metres)
-              </Label>
+              <Label className="text-right">Max drift distance</Label>
+              <p className="text-sm text-gray-600 mb-1">
+                (Maximum amount of distance that the quote and delivery pickup
+                can differ in meters)
+              </p>
               <Input
                 key="maxDriftDistance"
                 type="number"
