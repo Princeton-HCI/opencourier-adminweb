@@ -57,6 +57,11 @@ const validateURL = (url: string): boolean => {
   }
 };
 
+const sanitizeURL = (url: string): string => {
+  if (!url) return url;
+  return url.replace(/\/$/, ""); // Remove trailing slash
+};
+
 const InstanceConfigurationPage: NextPage = () => {
   const instanceConfigOptionsResponse = useGetInstanceConfigOptionsQuery({});
   const instanceConfigResponse = useGetInstanceConfigQuery({});
@@ -327,9 +332,13 @@ const InstanceConfigurationPage: NextPage = () => {
         metadata: {
           ...existingMetadata,
           name: name.trim(),
-          link: link.trim(),
-          websocketLink: websocketLink.trim(),
+          link: sanitizeURL(link.trim()),
+          websocketLink: sanitizeURL(websocketLink.trim()),
           imageURL: imageURL.trim(),
+          privacyPolicyUrl: computedURLs.privacyPolicyUrl,
+          termsOfServiceUrl: computedURLs.termsOfServiceUrl,
+          rulesUrl: computedURLs.rulesUrl,
+          descriptionUrl: computedURLs.descriptionUrl,
           region: processedRegion,
         },
       } as any);
@@ -338,7 +347,7 @@ const InstanceConfigurationPage: NextPage = () => {
         description: "Instance configuration saved successfully.",
       });
       // PRINT OUT DATA!
-      console.log(config);
+      console.log(config, computedURLs);
     } catch (error) {
       toast({
         title: "Error",
@@ -355,6 +364,17 @@ const InstanceConfigurationPage: NextPage = () => {
     console.log(data);
   };
 
+  // Compute URL fields based on instance link
+  const computedURLs = useMemo(() => {
+    const baseLink = sanitizeURL(config.link);
+    return {
+      privacyPolicyUrl: baseLink ? `${baseLink}/privacy-policy` : "",
+      termsOfServiceUrl: baseLink ? `${baseLink}/terms-of-service` : "",
+      rulesUrl: baseLink ? `${baseLink}/rules` : "",
+      descriptionUrl: baseLink ? `${baseLink}/description` : "",
+    };
+  }, [config.link]);
+
   // Memoize the onUpdate callback to prevent map re-renders
   const handleMapUpdate = useCallback((val: any) => {
     regionDataRef.current = val;
@@ -364,8 +384,9 @@ const InstanceConfigurationPage: NextPage = () => {
     field: "link" | "websocketLink" | "imageURL",
     value: string,
   ) => {
-    setConfig({ ...config, [field]: value });
-    if (value && !validateURL(value)) {
+    const sanitizedValue = sanitizeURL(value);
+    setConfig({ ...config, [field]: sanitizedValue });
+    if (sanitizedValue && !validateURL(sanitizedValue)) {
       setUrlErrors({ ...urlErrors, [field]: "Invalid URL format" });
     } else {
       const newErrors = { ...urlErrors };
