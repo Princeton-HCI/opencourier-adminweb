@@ -388,19 +388,38 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleRegisterSubmit = () => {
     const metadata = (instanceConfigResponse.data?.metadata as any) || {};
     const registrationData = {
-      registryLink: sanitizeURL(registryLink),
-      name: metadata.name,
-      link: metadata.link,
-      websocketLink: metadata.websocketLink,
-      imageUrl: metadata.imageUrl,
-      region: metadata.region,
-      privacyPolicyUrl: computedURLs.privacyPolicyUrl,
-      termsOfServiceUrl: computedURLs.termsOfServiceUrl,
-      rulesUrl: computedURLs.rulesUrl,
-      descriptionUrl: computedURLs.descriptionUrl,
-      userCount: typeof userCountData === "number" ? userCountData : null,
+      metadata: {
+        name: metadata.name,
+        link: metadata.link,
+        websocketLink: metadata.websocketLink,
+        region: metadata.region,
+        imageUrl: metadata.imageUrl,
+        rulesUrl: computedURLs.rulesUrl,
+        descriptionUrl: computedURLs.descriptionUrl,
+        privacyPolicyUrl: computedURLs.privacyPolicyUrl,
+        termsOfServiceUrl: computedURLs.termsOfServiceUrl,
+        userCount: typeof userCountData === "number" ? userCountData : null,
+      },
+      config: {
+        courierMatcherType: config.courierMatcherType,
+        quoteCalculationType: config.quoteCalculationType,
+        geoCalculationType: config.geoCalculationType,
+        deliveryDurationCalculationType: config.deliveryDurationCalculationType,
+        courierCompensationCalculationType:
+          config.courierCompensationCalculationType,
+        maxAssignmentDistance: config.maxAssignmentDistance,
+        maxDriftDistance: config.maxDriftDistance,
+        quoteExpirationMinutes: config.quoteExpirationMinutes,
+        feePercentageAmount: config.feePercentageAmount,
+        defaultCourierPayRate: config.defaultCourierPayRate,
+        defaultMinimumCourierPay: config.defaultMinimumCourierPay,
+        defaultMaxWorkingHours: config.defaultMaxWorkingHours,
+        defaultDietaryRestrictions: config.defaultDietaryRestrictions,
+        distanceUnit: config.distanceUnit,
+        currency: config.currency,
+      },
     };
-    console.log(registrationData);
+    console.log("registering", sanitizeURL(registryLink), registrationData);
   };
 
   // Compute URL fields based on instance link
