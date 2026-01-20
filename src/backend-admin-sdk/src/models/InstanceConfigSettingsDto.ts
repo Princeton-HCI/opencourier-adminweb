@@ -114,7 +114,7 @@ export interface InstanceConfigSettingsDto {
    * @type {object}
    * @memberof InstanceConfigSettingsDto
    */
-  metadata: object | null;
+  details: object | null;
 }
 
 /**
@@ -260,7 +260,7 @@ export function InstanceConfigSettingsDtoFromJSONTyped(
     defaultCourierPayRate: json["defaultCourierPayRate"],
     defaultMinimumCourierPay: json["defaultMinimumCourierPay"],
     defaultMaxWorkingHours: json["defaultMaxWorkingHours"],
-    metadata: json["metadata"],
+    details: json["details"],
   };
 }
 
@@ -290,6 +290,6 @@ export function InstanceConfigSettingsDtoToJSON(
     defaultCourierPayRate: value.defaultCourierPayRate,
     defaultMinimumCourierPay: value.defaultMinimumCourierPay,
     defaultMaxWorkingHours: value.defaultMaxWorkingHours,
-    metadata: value.metadata,
+    details: value.details,
   };
 }

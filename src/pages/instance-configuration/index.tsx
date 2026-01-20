@@ -113,13 +113,13 @@ const InstanceConfigurationPage: NextPage = () => {
     const data = instanceConfigResponse.data;
     console.log(data);
     if (data) {
-      const metadata = (data.metadata as any) || {};
+      const details = (data.details as any) || {};
       setConfig({
-        name: metadata.name ?? "",
-        link: metadata.link ?? "",
-        websocketLink: metadata.websocketLink ?? "",
-        imageUrl: metadata.imageUrl ?? "",
-        region: metadata.region ?? null,
+        name: details.name ?? "",
+        link: details.link ?? "",
+        websocketLink: details.websocketLink ?? "",
+        imageUrl: details.imageUrl ?? "",
+        region: details.region ?? null,
         courierMatcherType: data.courierMatcherType ?? "",
         quoteCalculationType: data.quoteCalculationType ?? "",
         geoCalculationType: data.geoCalculationType ?? "",
@@ -142,10 +142,10 @@ const InstanceConfigurationPage: NextPage = () => {
         defaultMaxWorkingHours: data.defaultMaxWorkingHours ?? 0,
         feePercentageAmount: data.feePercentageAmount ?? 0,
       });
-      setPrivacyPolicyContent(metadata.privacyPolicyContent ?? "");
-      setTermsOfServiceContent(metadata.termsOfServiceContent ?? "");
-      setRulesContent(metadata.rulesContent ?? "");
-      setDescriptionContent(metadata.descriptionContent ?? "");
+      setPrivacyPolicyContent(details.privacyPolicyContent ?? "");
+      setTermsOfServiceContent(details.termsOfServiceContent ?? "");
+      setRulesContent(details.rulesContent ?? "");
+      setDescriptionContent(details.descriptionContent ?? "");
     }
   }, [instanceConfigResponse.data]);
 
@@ -167,12 +167,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSavePrivacyPolicy = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           privacyPolicyContent: privacyPolicyContent.trim(),
         },
       } as any);
@@ -198,12 +198,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveTermsOfService = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           termsOfServiceContent: termsOfServiceContent.trim(),
         },
       } as any);
@@ -229,12 +229,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveRules = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           rulesContent: rulesContent.trim(),
         },
       } as any);
@@ -260,12 +260,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveDescription = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           descriptionContent: descriptionContent.trim(),
         },
       } as any);
@@ -304,8 +304,8 @@ const InstanceConfigurationPage: NextPage = () => {
     try {
       const { name, link, websocketLink, imageUrl, region, ...restConfig } =
         config;
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       // Sanitize and trim URL fields
       const sanitizedName = name.trim();
@@ -345,8 +345,8 @@ const InstanceConfigurationPage: NextPage = () => {
 
       await setInstanceConfigMutation({
         ...restConfig,
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           name: sanitizedName,
           link: sanitizedLink,
           websocketLink: sanitizedWebsocketLink,
@@ -386,14 +386,14 @@ const InstanceConfigurationPage: NextPage = () => {
   };
 
   const handleRegisterSubmit = () => {
-    const metadata = (instanceConfigResponse.data?.metadata as any) || {};
+    const details = (instanceConfigResponse.data?.details as any) || {};
     const registrationData = {
-      metadata: {
-        name: metadata.name,
-        link: metadata.link,
-        websocketLink: metadata.websocketLink,
-        region: metadata.region,
-        imageUrl: metadata.imageUrl,
+      details: {
+        name: details.name,
+        link: details.link,
+        websocketLink: details.websocketLink,
+        region: details.region,
+        imageUrl: details.imageUrl,
         rulesUrl: computedURLs.rulesUrl,
         descriptionUrl: computedURLs.descriptionUrl,
         privacyPolicyUrl: computedURLs.privacyPolicyUrl,
@@ -544,13 +544,11 @@ const InstanceConfigurationPage: NextPage = () => {
                 onChange={(event) =>
                   handleURLFieldChange("link", event.target.value)
                 }
-                disabled={
-                  !!(instanceConfigResponse.data?.metadata as any)?.link
-                }
+                disabled={!!(instanceConfigResponse.data?.details as any)?.link}
                 className={`max-w-[500px] ${
                   urlErrors.link ? "border-red-500 border-2" : ""
                 } ${
-                  !!(instanceConfigResponse.data?.metadata as any)?.link
+                  !!(instanceConfigResponse.data?.details as any)?.link
                     ? "bg-gray-100 cursor-not-allowed"
                     : ""
                 }`}
@@ -1143,7 +1141,7 @@ const InstanceConfigurationPage: NextPage = () => {
                 Current Instance Configuration
               </h3>
               <h3 className="text-gray-600 text-md font-semibold mb-2">
-                Metadata
+                Details
               </h3>
               <div className="w-2/3 grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>

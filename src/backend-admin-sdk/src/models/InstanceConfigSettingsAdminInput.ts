@@ -114,7 +114,7 @@ export interface InstanceConfigSettingsAdminInput {
    * @type {object}
    * @memberof InstanceConfigSettingsAdminInput
    */
-  metadata?: object;
+  details?: object;
 }
 
 /**
@@ -282,7 +282,7 @@ export function InstanceConfigSettingsAdminInputFromJSONTyped(
     defaultDietaryRestrictions: !exists(json, "defaultDietaryRestrictions")
       ? undefined
       : json["defaultDietaryRestrictions"],
-    metadata: !exists(json, "metadata") ? undefined : json["metadata"],
+    details: !exists(json, "details") ? undefined : json["details"],
   };
 }
 
@@ -312,6 +312,6 @@ export function InstanceConfigSettingsAdminInputToJSON(
     defaultMinimumCourierPay: value.defaultMinimumCourierPay,
     defaultMaxWorkingHours: value.defaultMaxWorkingHours,
     defaultDietaryRestrictions: value.defaultDietaryRestrictions,
-    metadata: value.metadata,
+    details: value.details,
   };
 }
