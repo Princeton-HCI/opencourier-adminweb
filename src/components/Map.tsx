@@ -53,10 +53,14 @@ const GeomanControls = ({
   onUpdate,
   featureGroupRef,
   initialGeoJSON,
+  readOnly,
+  fitPadding,
 }: {
   onUpdate: (geojson: any) => void;
   featureGroupRef: React.RefObject<L.FeatureGroup>;
   initialGeoJSON?: any;
+  readOnly?: boolean;
+  fitPadding?: [number, number];
 }) => {
   const map = useMap();
   const isMounted = useRef(false);
@@ -102,7 +106,10 @@ const GeomanControls = ({
       if (featureGroupRef.current) {
         const bounds = featureGroupRef.current.getBounds();
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [50, 50], animate: false });
+          map.fitBounds(bounds, {
+            padding: fitPadding ?? [50, 50],
+            animate: false,
+          });
         }
       }
     } catch (error) {
@@ -114,17 +121,19 @@ const GeomanControls = ({
     if (isMounted.current) return;
     isMounted.current = true;
 
+    if (readOnly) return; // Skip controls in read-only mode
+
     // Initialize Geoman
     // @ts-ignore
     map.pm.addControls({
       position: "topleft",
-      drawCircle: true, // keep if you want regular circles
-      drawCircleMarker: false, // ❌ disable circle marker
-      drawMarker: false, // ❌ disable point markers
-      drawPolyline: false, // optional
+      drawCircle: true,
+      drawCircleMarker: false,
+      drawMarker: false,
+      drawPolyline: false,
       drawRectangle: true,
       drawPolygon: true,
-      drawText: false, // ❌ disable text
+      drawText: false,
       editMode: true,
       dragMode: true,
       removalMode: true,
@@ -145,7 +154,7 @@ const GeomanControls = ({
     // Global removal/edit in case user removes layers via toolbar
     map.on("pm:remove", (e: any) => {
       const layer = e.layer;
-      featureGroupRef.current?.removeLayer(layer); // <-- remove it from FeatureGroup
+      featureGroupRef.current?.removeLayer(layer);
       updateAllLayers();
     });
 
@@ -154,7 +163,7 @@ const GeomanControls = ({
       map.off("pm:create");
       map.off("pm:remove");
     };
-  }, [map, onUpdate, featureGroupRef]);
+  }, [map, onUpdate, featureGroupRef, readOnly]);
 
   return null;
 };
@@ -162,10 +171,21 @@ const GeomanControls = ({
 // --- MAIN COMPONENT ---
 interface MapProps {
   onUpdate: (geojson: any) => void;
-  initialGeoJSON?: any; // Pass this if editing an existing instance
+  initialGeoJSON?: any;
+  readOnly?: boolean;
+  height?: string;
+  width?: string;
+  fitPadding?: [number, number];
 }
 
-export default function Map({ onUpdate, initialGeoJSON }: MapProps) {
+export default function Map({
+  onUpdate,
+  initialGeoJSON,
+  readOnly,
+  height = "h-[400px]",
+  width = "w-4/5",
+  fitPadding,
+}: MapProps) {
   useEffect(() => {
     iconFix();
   }, []);
@@ -173,7 +193,9 @@ export default function Map({ onUpdate, initialGeoJSON }: MapProps) {
   const featureGroupRef = useRef<L.FeatureGroup>(null);
 
   return (
-    <div className="h-[400px] w-4/5 rounded-lg overflow-hidden border border-gray-300 relative z-0">
+    <div
+      className={`${height} ${width} rounded-lg overflow-hidden border border-gray-300 relative z-0`}
+    >
       <MapContainer
         center={[40.344, -74.6514]} // Default: Princeton, NJ
         zoom={14}
@@ -189,6 +211,8 @@ export default function Map({ onUpdate, initialGeoJSON }: MapProps) {
           onUpdate={onUpdate}
           featureGroupRef={featureGroupRef}
           initialGeoJSON={initialGeoJSON}
+          readOnly={readOnly}
+          fitPadding={fitPadding}
         />
       </MapContainer>
     </div>

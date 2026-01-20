@@ -6,18 +6,7 @@ import {
 import { DefaultLayout } from "@/components/layouts/DefaultLayout";
 import type { NextPage } from "next";
 import { InstanceConfigSettingsAdminInput } from "@/backend-admin-sdk";
-import { useForm } from "react-hook-form";
-import {
-  Input,
-  Label,
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  useToast,
-} from "@/admin-web-components";
+import { Input, Label, useToast } from "@/admin-web-components";
 import {
   COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN,
   COURIER_DIETARY_RESTRICTIONS_TO_HUMAN,
@@ -74,16 +63,8 @@ const InstanceConfigurationPage: NextPage = () => {
     websocketLink?: string;
     imageURL?: string;
   }>({});
-  const form = useForm({
-    defaultValues: {
-      name: "",
-      domainUrl: hostname,
-      descriptionURL: "",
-      termsOfServiceUrl: `${hostname}/termsofservice.html`,
-      privacyPolicyUrl: `${hostname}/privacypolicy.html`,
-      contactEmail: "",
-    },
-  });
+  const [registryLink, setRegistryLink] = useState("");
+  const [registryLinkError, setRegistryLinkError] = useState("");
 
   const regionDataRef = useRef<any>(null);
 
@@ -116,7 +97,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const [rulesContent, setRulesContent] = useState("");
   const [descriptionContent, setDescriptionContent] = useState("");
   const [currentView, setCurrentView] = useState<
-    "main" | "privacy-policy" | "terms-of-service" | "rules" | "description"
+    | "main"
+    | "privacy-policy"
+    | "terms-of-service"
+    | "rules"
+    | "description"
+    | "registration"
   >("main");
 
   // Sync server data to local state
@@ -386,8 +372,30 @@ const InstanceConfigurationPage: NextPage = () => {
     }
   };
 
-  const onSubmit = (data: any) => {
-    console.log(data);
+  const handleRegistryLinkChange = (value: string) => {
+    setRegistryLink(value);
+    if (value && !validateURL(value)) {
+      setRegistryLinkError("Invalid URL format");
+    } else {
+      setRegistryLinkError("");
+    }
+  };
+
+  const handleRegisterSubmit = () => {
+    const metadata = (instanceConfigResponse.data?.metadata as any) || {};
+    const registrationData = {
+      registryLink: sanitizeURL(registryLink),
+      name: metadata.name,
+      link: metadata.link,
+      websocketLink: metadata.websocketLink,
+      imageURL: metadata.imageURL,
+      region: metadata.region,
+      privacyPolicyUrl: computedURLs.privacyPolicyUrl,
+      termsOfServiceUrl: computedURLs.termsOfServiceUrl,
+      rulesUrl: computedURLs.rulesUrl,
+      descriptionUrl: computedURLs.descriptionUrl,
+    };
+    console.log(registrationData);
   };
 
   // Compute URL fields based on instance link
@@ -428,140 +436,14 @@ const InstanceConfigurationPage: NextPage = () => {
   return (
     <DefaultLayout>
       {/* Header and Edit Links - Always Visible */}
-      <div className="flex justify-between">
-        <h2 className="text-3xl font-medium tracking-tight pb-1">
+      <div className="flex items-center gap-4">
+        <h2 className="text-3xl font-medium tracking-tight pb-2">
           Instance Configuration
         </h2>
         {currentView === "main" && (
           <button
             className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700"
-            onClick={() =>
-              openModal({
-                id: "instance-registration-modal",
-                title: "Instance Registration Form",
-                description:
-                  "Register your instance to the instance registry, so that users can discover it!",
-                children: (
-                  <Form {...form}>
-                    <form
-                      onSubmit={form.handleSubmit(onSubmit)}
-                      className="flex flex-col gap-4"
-                    >
-                      {/* Instance Name */}
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Instance Name</FormLabel>
-                            <FormControl>
-                              <input
-                                type="text"
-                                {...field}
-                                className="mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Instance Domain URL */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Instance Domain URL</FormLabel>
-                        <FormControl>
-                          <input
-                            type="text"
-                            value={hostname}
-                            readOnly
-                            className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                          />
-                        </FormControl>
-                      </FormItem>
-
-                      {/* Instance Description */}
-                      <FormField
-                        control={form.control}
-                        name="descriptionURL"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Instance Description</FormLabel>
-                            <FormControl>
-                              <input
-                                type="text"
-                                value={`${hostname}/description.html`}
-                                readOnly
-                                className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Geographic Region */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Geographic Region</FormLabel>
-                        <p className="text-gray-600">placeholder for now</p>
-                      </FormItem>
-
-                      {/* Terms of Service URL */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Terms of Service URL</FormLabel>
-                        <FormControl>
-                          <input
-                            type="text"
-                            value={`${hostname}/termsofservice.html`}
-                            readOnly
-                            className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                          />
-                        </FormControl>
-                      </FormItem>
-
-                      {/* Privacy Policy URL */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Privacy Policy URL</FormLabel>
-                        <FormControl>
-                          <input
-                            type="text"
-                            value={`${hostname}/privacypolicy.html`}
-                            readOnly
-                            className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                          />
-                        </FormControl>
-                      </FormItem>
-
-                      {/* Admin Contact Email */}
-                      <FormField
-                        control={form.control}
-                        name="contactEmail"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Administrator Contact Email</FormLabel>
-                            <FormControl>
-                              <input
-                                type="email"
-                                {...field}
-                                className="mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Submit */}
-                      <button
-                        type="submit"
-                        className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium w-fit hover:bg-slate-700"
-                      >
-                        Register
-                      </button>
-                    </form>
-                  </Form>
-                ),
-              })
-            }
+            onClick={() => setCurrentView("registration")}
           >
             Register Instance
           </button>
@@ -594,6 +476,13 @@ const InstanceConfigurationPage: NextPage = () => {
           className="text-gray-500 cursor-pointer hover:text-gray-800"
         >
           <Label className="cursor-pointer">Edit Privacy Policy</Label>
+        </button>
+        <div className="h-4 w-px bg-gray-300" />
+        <button
+          onClick={() => setCurrentView("privacy-policy")}
+          className="text-gray-500 cursor-pointer hover:text-gray-800"
+        >
+          <Label className="cursor-pointer">Register Instance</Label>
         </button>
       </div>
 
@@ -976,7 +865,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </button>
         </>
       ) : currentView === "terms-of-service" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">
             Editing Terms of Service
           </h3>
@@ -1016,7 +905,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSaveTermsOfService}
               disabled={isSaving}
@@ -1033,7 +922,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
         </div>
       ) : currentView === "rules" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">Editing Rules</h3>
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
@@ -1071,7 +960,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSaveRules}
               disabled={isSaving}
@@ -1088,7 +977,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
         </div>
       ) : currentView === "description" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">Editing Description</h3>
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
@@ -1126,7 +1015,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSaveDescription}
               disabled={isSaving}
@@ -1143,7 +1032,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
         </div>
       ) : currentView === "privacy-policy" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">Editing Privacy Policy</h3>
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
@@ -1181,7 +1070,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSavePrivacyPolicy}
               disabled={isSaving}
@@ -1194,6 +1083,125 @@ const InstanceConfigurationPage: NextPage = () => {
               className="bg-gray-200 rounded-md text-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-300"
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      ) : currentView === "registration" ? (
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold pb-2">Instance Registration</h3>
+          <p className="text-gray-600 mb-4 text-sm">
+            Register your instance to an instance registry, so that couriers can
+            more easily discover it!
+          </p>
+
+          <div className="flex flex-col gap-4">
+            {/* Registry Link Input */}
+            <div className="flex flex-col">
+              <Label className="mb-2">Registry Link</Label>
+              <Input
+                type="text"
+                value={registryLink}
+                onChange={(e) => handleRegistryLinkChange(e.target.value)}
+                className={`max-w-[500px] ${
+                  registryLinkError ? "border-red-500 border-2" : ""
+                }`}
+                placeholder="https://registry.example.com"
+              />
+              {registryLinkError && (
+                <p className="text-red-500 text-sm mt-1">{registryLinkError}</p>
+              )}
+            </div>
+
+            {/* Display Saved Configuration */}
+            <div className="">
+              <h3 className="text-lg font-semibold mb-2">
+                Current Instance Configuration
+              </h3>
+
+              <div className="w-2/3 grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <Label className="text-gray-600">Name</Label>
+                  <p className="text-sm">{config.name || "Not set"}</p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-600">Link</Label>
+                  <p className="text-sm break-all">
+                    {config.link || "Not set"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-600">Websocket Link</Label>
+                  <p className="text-sm break-all">
+                    {config.websocketLink || "Not set"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-600">Image URL</Label>
+                  <p className="text-sm break-all">
+                    {config.imageURL || "Not set"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-600">Privacy Policy URL</Label>
+                  <p className="text-sm break-all">
+                    {computedURLs.privacyPolicyUrl || "Not set"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-600">Terms of Service URL</Label>
+                  <p className="text-sm break-all">
+                    {computedURLs.termsOfServiceUrl || "Not set"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-600">Rules URL</Label>
+                  <p className="text-sm break-all">
+                    {computedURLs.rulesUrl || "Not set"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-600">Description URL</Label>
+                  <p className="text-sm break-all">
+                    {computedURLs.descriptionUrl || "Not set"}
+                  </p>
+                </div>
+
+                <div className="col-span-2">
+                  <Label className="text-gray-600 mb-2 block">Region</Label>
+                  {config.region ? (
+                    <div className="h-40 w-full">
+                      <AdminMap
+                        initialGeoJSON={config.region}
+                        onUpdate={() => {}}
+                        readOnly={true}
+                        height="h-40"
+                        width="w-full"
+                        fitPadding={[12, 12]}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm">Not set</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-4">
+            <button
+              onClick={handleRegisterSubmit}
+              disabled={!registryLink || !!registryLinkError}
+              className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Register
             </button>
           </div>
         </div>
