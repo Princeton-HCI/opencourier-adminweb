@@ -1142,13 +1142,14 @@ const InstanceConfigurationPage: NextPage = () => {
               <h3 className="text-lg font-semibold mb-2">
                 Current Instance Configuration
               </h3>
-
+              <h3 className="text-gray-600 text-md font-semibold mb-2">
+                Metadata
+              </h3>
               <div className="w-2/3 grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
                   <Label className="text-gray-600">Name</Label>
                   <p className="text-sm">{config.name || "Not set"}</p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">User Count</Label>
                   <p className="text-sm">
@@ -1159,56 +1160,48 @@ const InstanceConfigurationPage: NextPage = () => {
                       : "Not available"}
                   </p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">Link</Label>
                   <p className="text-sm break-all">
                     {config.link || "Not set"}
                   </p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">Websocket Link</Label>
                   <p className="text-sm break-all">
                     {config.websocketLink || "Not set"}
                   </p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">Image URL</Label>
                   <p className="text-sm break-all">
                     {config.imageUrl || "Not set"}
                   </p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">Privacy Policy URL</Label>
                   <p className="text-sm break-all">
                     {computedURLs.privacyPolicyUrl || "Not set"}
                   </p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">Terms of Service URL</Label>
                   <p className="text-sm break-all">
                     {computedURLs.termsOfServiceUrl || "Not set"}
                   </p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">Rules URL</Label>
                   <p className="text-sm break-all">
                     {computedURLs.rulesUrl || "Not set"}
                   </p>
                 </div>
-
                 <div>
                   <Label className="text-gray-600">Description URL</Label>
                   <p className="text-sm break-all">
                     {computedURLs.descriptionUrl || "Not set"}
                   </p>
                 </div>
-
                 <div className="col-span-2">
                   <Label className="text-gray-600 mb-2 block">Region</Label>
                   {config.region ? (
@@ -1227,11 +1220,148 @@ const InstanceConfigurationPage: NextPage = () => {
                   )}
                 </div>
               </div>
+              <h3 className="text-gray-600 text-md font-semibold mb-2 mt-6">
+                Config
+              </h3>
+              <div className="w-2/3 grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <Label className="text-gray-600">Courier Matcher Type</Label>
+                  <p className="text-sm">
+                    {
+                      COURIER_MATCHER_TYPE_TO_HUMAN[
+                        config.courierMatcherType as keyof typeof COURIER_MATCHER_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Quote Calculation Type
+                  </Label>
+                  <p className="text-sm">
+                    {
+                      QUOTE_CALCULATION_TYPE_TO_HUMAN[
+                        config.quoteCalculationType as keyof typeof QUOTE_CALCULATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Geo Calculation Type</Label>
+                  <p className="text-sm">
+                    {
+                      GEO_CALCULATION_TYPE_TO_HUMAN[
+                        config.geoCalculationType as keyof typeof GEO_CALCULATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Delivery Duration Calculation Type
+                  </Label>
+                  <p className="text-sm">
+                    {
+                      DELIVERY_DURATION_CALCULATION_TYPE_TO_HUMAN[
+                        config.deliveryDurationCalculationType as keyof typeof DELIVERY_DURATION_CALCULATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Courier Compensation Calculation Type
+                  </Label>
+                  <p className="text-sm">
+                    {
+                      COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN[
+                        config.courierCompensationCalculationType as keyof typeof COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Max Assignment Distance
+                  </Label>
+                  <p className="text-sm">{config.maxAssignmentDistance}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Max Drift Distance</Label>
+                  <p className="text-sm">{config.maxDriftDistance}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Quote Expiration Minutes
+                  </Label>
+                  <p className="text-sm">{config.quoteExpirationMinutes}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Fee Percentage Amount</Label>
+                  <p className="text-sm">{config.feePercentageAmount}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Courier Pay Rate
+                  </Label>
+                  <p className="text-sm">{config.defaultCourierPayRate}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Minimum Courier Pay
+                  </Label>
+                  <p className="text-sm">{config.defaultMinimumCourierPay}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Max Working Hours
+                  </Label>
+                  <p className="text-sm">{config.defaultMaxWorkingHours}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Dietary Restrictions
+                  </Label>
+                  <p className="text-sm">
+                    {config.defaultDietaryRestrictions
+                      .map(
+                        (restriction) =>
+                          COURIER_DIETARY_RESTRICTIONS_TO_HUMAN[
+                            restriction as keyof typeof COURIER_DIETARY_RESTRICTIONS_TO_HUMAN
+                          ],
+                      )
+                      .join(", ")}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Distance Unit</Label>
+                  <p className="text-sm">
+                    {
+                      DISTANCE_UNIT_TO_HUMAN[
+                        config.distanceUnit as keyof typeof DISTANCE_UNIT_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Currency</Label>
+                  <p className="text-sm">
+                    {
+                      CURRENCY_TO_HUMAN[
+                        config.currency as keyof typeof CURRENCY_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Actions */}
           <div className="mt-4">
+            <h3 className="text-sm text-gray-600 mb-1">
+              Please double-check this information before registering!
+            </h3>
             <button
               onClick={handleRegisterSubmit}
               disabled={!registryLink || !!registryLinkError}
