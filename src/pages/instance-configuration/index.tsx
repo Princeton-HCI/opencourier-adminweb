@@ -598,7 +598,7 @@ const InstanceConfigurationPage: NextPage = () => {
               )}
             </div>
             <div>
-              <Label className="text-right">Operating region</Label>
+              <Label className="text-right">Operating Region</Label>
               <div className="pt-2 max-w-4xl">
                 <AdminMap
                   initialGeoJSON={config.region}
@@ -607,7 +607,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </div>
             </div>
             <div>
-              <Label className="text-right">Courier matcher type</Label>
+              <Label className="text-right">Courier Matcher Type</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -626,7 +626,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Quote calculation type</Label>
+              <Label className="text-right">Quote Calculation Type</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -645,7 +645,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Geo calculation type</Label>
+              <Label className="text-right">Geo Calculation Type</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -665,7 +665,7 @@ const InstanceConfigurationPage: NextPage = () => {
             </div>
             <div>
               <Label className="text-right">
-                Delivery duration calculation type
+                Delivery Duration Calculation Type
               </Label>
               <br />
               <select
@@ -689,7 +689,7 @@ const InstanceConfigurationPage: NextPage = () => {
             </div>
             <div>
               <Label className="text-right">
-                Courier compensation calculation type
+                Courier Compensation Calculation Type
               </Label>
               <br />
               <select
@@ -712,7 +712,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Dietary restrictions</Label>
+              <Label className="text-right">Default Dietary Restrictions</Label>
               <p className="text-sm text-gray-600 mb-1">(Select multiple)</p>
               <select
                 className="border-[1px] border-input rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -749,7 +749,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Distance unit</Label>
+              <Label className="text-right">Distance Unit</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -768,7 +768,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Max assignment distance</Label>
+              <Label className="text-right">Max Assignment Distance</Label>
               <Input
                 key="maxAssignmentDistance"
                 type="number"
@@ -783,7 +783,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Max drift distance</Label>
+              <Label className="text-right">Max Drift Distance</Label>
               <p className="text-sm text-gray-600 mb-1">
                 (Maximum amount of distance that the quote and delivery pickup
                 can differ in meters)
@@ -802,7 +802,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Quote expiration minutes</Label>
+              <Label className="text-right">Quote Expiration Minutes</Label>
               <Input
                 key="quoteExpirationMinutes"
                 type="number"
@@ -817,7 +817,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Default courier pay rate</Label>
+              <Label className="text-right">Default Courier Pay Rate</Label>
               <Input
                 key="defaultCourierPayRate"
                 type="number"
@@ -832,7 +832,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Default minimum courier pay</Label>
+              <Label className="text-right">Default Minimum Courier Pay</Label>
               <Input
                 key="defaultMinimumCourierPay"
                 type="number"
@@ -847,7 +847,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Default max working hours</Label>
+              <Label className="text-right">Default Max Working Hours</Label>
               <Input
                 key="defaultMaxWorkingHours"
                 type="number"
@@ -862,7 +862,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Fee percentage amount</Label>
+              <Label className="text-right">Fee Percentage Amount</Label>
               <Input
                 key="feePercentageAmount"
                 type="number"
@@ -1148,7 +1148,7 @@ const InstanceConfigurationPage: NextPage = () => {
               <div className="w-2/3 grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
                   <Label className="text-gray-600">Name</Label>
-                  <p className="text-sm">{config.name || "Not set"}</p>
+                  <p className="text-sm">{config.name}</p>
                 </div>
                 <div>
                   <Label className="text-gray-600">User Count</Label>
@@ -1161,49 +1161,43 @@ const InstanceConfigurationPage: NextPage = () => {
                   </p>
                 </div>
                 <div>
-                  <Label className="text-gray-600">Link</Label>
-                  <p className="text-sm break-all">
-                    {config.link || "Not set"}
-                  </p>
+                  <Label className="text-gray-600">URL</Label>
+                  <p className="text-sm break-all">{config.link}</p>
                 </div>
                 <div>
-                  <Label className="text-gray-600">Websocket Link</Label>
-                  <p className="text-sm break-all">
-                    {config.websocketLink || "Not set"}
-                  </p>
+                  <Label className="text-gray-600">Websocket URL</Label>
+                  <p className="text-sm break-all">{config.websocketLink}</p>
                 </div>
                 <div>
-                  <Label className="text-gray-600">Image URL</Label>
-                  <p className="text-sm break-all">
-                    {config.imageUrl || "Not set"}
-                  </p>
+                  <Label className="text-gray-600">Logo Image URL</Label>
+                  <p className="text-sm break-all">{config.imageUrl}</p>
                 </div>
                 <div>
                   <Label className="text-gray-600">Privacy Policy URL</Label>
                   <p className="text-sm break-all">
-                    {computedURLs.privacyPolicyUrl || "Not set"}
+                    {computedURLs.privacyPolicyUrl}
                   </p>
                 </div>
                 <div>
                   <Label className="text-gray-600">Terms of Service URL</Label>
                   <p className="text-sm break-all">
-                    {computedURLs.termsOfServiceUrl || "Not set"}
+                    {computedURLs.termsOfServiceUrl}
                   </p>
                 </div>
                 <div>
                   <Label className="text-gray-600">Rules URL</Label>
-                  <p className="text-sm break-all">
-                    {computedURLs.rulesUrl || "Not set"}
-                  </p>
+                  <p className="text-sm break-all">{computedURLs.rulesUrl}</p>
                 </div>
                 <div>
                   <Label className="text-gray-600">Description URL</Label>
                   <p className="text-sm break-all">
-                    {computedURLs.descriptionUrl || "Not set"}
+                    {computedURLs.descriptionUrl}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <Label className="text-gray-600 mb-2 block">Region</Label>
+                  <Label className="text-gray-600 mb-2 block">
+                    Operating Region
+                  </Label>
                   {config.region ? (
                     <div className="h-40 w-full">
                       <AdminMap
