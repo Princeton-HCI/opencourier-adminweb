@@ -3,6 +3,7 @@ import {
   useGetInstanceConfigQuery,
   useSetInstanceConfigMutation,
 } from "@/api/configApi";
+import { useGetUserCountQuery } from "@/api/userApi";
 import { DefaultLayout } from "@/components/layouts/DefaultLayout";
 import type { NextPage } from "next";
 import { InstanceConfigSettingsAdminInput } from "@/backend-admin-sdk";
@@ -54,6 +55,8 @@ const sanitizeURL = (url: string): string => {
 const InstanceConfigurationPage: NextPage = () => {
   const instanceConfigOptionsResponse = useGetInstanceConfigOptionsQuery({});
   const instanceConfigResponse = useGetInstanceConfigQuery({});
+  const { data: userCountData, isLoading: isUserCountLoading } =
+    useGetUserCountQuery();
   const [setInstanceConfigMutation] = useSetInstanceConfigMutation();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -61,7 +64,7 @@ const InstanceConfigurationPage: NextPage = () => {
   const [urlErrors, setUrlErrors] = useState<{
     link?: string;
     websocketLink?: string;
-    imageURL?: string;
+    imageUrl?: string;
   }>({});
   const [registryLink, setRegistryLink] = useState("");
   const [registryLinkError, setRegistryLinkError] = useState("");
@@ -73,7 +76,7 @@ const InstanceConfigurationPage: NextPage = () => {
     name: "",
     link: "",
     websocketLink: "",
-    imageURL: "",
+    imageUrl: "",
     region: null,
     courierMatcherType: "",
     quoteCalculationType: "",
@@ -108,13 +111,14 @@ const InstanceConfigurationPage: NextPage = () => {
   // Sync server data to local state
   useEffect(() => {
     const data = instanceConfigResponse.data;
+    console.log(data);
     if (data) {
       const metadata = (data.metadata as any) || {};
       setConfig({
         name: metadata.name ?? "",
         link: metadata.link ?? "",
         websocketLink: metadata.websocketLink ?? "",
-        imageURL: metadata.imageURL ?? "",
+        imageUrl: metadata.imageUrl ?? "",
         region: metadata.region ?? null,
         courierMatcherType: data.courierMatcherType ?? "",
         quoteCalculationType: data.quoteCalculationType ?? "",
@@ -289,7 +293,7 @@ const InstanceConfigurationPage: NextPage = () => {
       config.name.trim() !== "" &&
       config.link.trim() !== "" &&
       config.websocketLink.trim() !== "" &&
-      config.imageURL.trim() !== "" &&
+      config.imageUrl.trim() !== "" &&
       config.region !== null &&
       config.defaultDietaryRestrictions.length > 0
     );
@@ -298,7 +302,7 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveAllChanges = async () => {
     setIsSaving(true);
     try {
-      const { name, link, websocketLink, imageURL, region, ...restConfig } =
+      const { name, link, websocketLink, imageUrl, region, ...restConfig } =
         config;
       const existingMetadata =
         (instanceConfigResponse.data?.metadata as any) || {};
@@ -307,7 +311,7 @@ const InstanceConfigurationPage: NextPage = () => {
       const sanitizedName = name.trim();
       const sanitizedLink = sanitizeURL(link.trim());
       const sanitizedWebsocketLink = sanitizeURL(websocketLink.trim());
-      const sanitizedImageURL = sanitizeURL(imageURL.trim());
+      const sanitizedImageUrl = sanitizeURL(imageUrl.trim());
 
       // Update config state with sanitized values
       setConfig({
@@ -315,7 +319,7 @@ const InstanceConfigurationPage: NextPage = () => {
         name: sanitizedName,
         link: sanitizedLink,
         websocketLink: sanitizedWebsocketLink,
-        imageURL: sanitizedImageURL,
+        imageUrl: sanitizedImageUrl,
       });
 
       // Process region data - keep as FeatureCollection for individual polygon editing
@@ -346,7 +350,7 @@ const InstanceConfigurationPage: NextPage = () => {
           name: sanitizedName,
           link: sanitizedLink,
           websocketLink: sanitizedWebsocketLink,
-          imageURL: sanitizedImageURL,
+          imageUrl: sanitizedImageUrl,
           privacyPolicyUrl: computedURLs.privacyPolicyUrl,
           termsOfServiceUrl: computedURLs.termsOfServiceUrl,
           rulesUrl: computedURLs.rulesUrl,
@@ -388,12 +392,13 @@ const InstanceConfigurationPage: NextPage = () => {
       name: metadata.name,
       link: metadata.link,
       websocketLink: metadata.websocketLink,
-      imageURL: metadata.imageURL,
+      imageUrl: metadata.imageUrl,
       region: metadata.region,
       privacyPolicyUrl: computedURLs.privacyPolicyUrl,
       termsOfServiceUrl: computedURLs.termsOfServiceUrl,
       rulesUrl: computedURLs.rulesUrl,
       descriptionUrl: computedURLs.descriptionUrl,
+      userCount: typeof userCountData === "number" ? userCountData : null,
     };
     console.log(registrationData);
   };
@@ -420,7 +425,7 @@ const InstanceConfigurationPage: NextPage = () => {
   }, []);
 
   const handleURLFieldChange = (
-    field: "link" | "websocketLink" | "imageURL",
+    field: "link" | "websocketLink" | "imageUrl",
     value: string,
   ) => {
     setConfig({ ...config, [field]: value });
@@ -440,6 +445,14 @@ const InstanceConfigurationPage: NextPage = () => {
         <h2 className="text-3xl font-medium tracking-tight pb-2">
           Instance Configuration
         </h2>
+        {currentView !== "main" && (
+          <button
+            className="bg-gray-200 rounded-md text-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-300"
+            onClick={() => setCurrentView("main")}
+          >
+            ← Back
+          </button>
+        )}
         {currentView === "main" && (
           <button
             className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700"
@@ -476,13 +489,6 @@ const InstanceConfigurationPage: NextPage = () => {
           className="text-gray-500 cursor-pointer hover:text-gray-800"
         >
           <Label className="cursor-pointer">Edit Privacy Policy</Label>
-        </button>
-        <div className="h-4 w-px bg-gray-300" />
-        <button
-          onClick={() => setCurrentView("privacy-policy")}
-          className="text-gray-500 cursor-pointer hover:text-gray-800"
-        >
-          <Label className="cursor-pointer">Register Instance</Label>
         </button>
       </div>
 
@@ -556,19 +562,19 @@ const InstanceConfigurationPage: NextPage = () => {
             <div>
               <Label className="text-right">Logo Image URL</Label>
               <Input
-                key="imageURL"
+                key="imageUrl"
                 type="text"
-                value={config.imageURL}
+                value={config.imageUrl}
                 onChange={(event) =>
-                  handleURLFieldChange("imageURL", event.target.value)
+                  handleURLFieldChange("imageUrl", event.target.value)
                 }
                 className={`max-w-[500px] ${
-                  urlErrors.imageURL ? "border-red-500 border-2" : ""
+                  urlErrors.imageUrl ? "border-red-500 border-2" : ""
                 }`}
               />
-              {urlErrors.imageURL && (
+              {urlErrors.imageUrl && (
                 <p className="text-red-500 text-sm mt-1">
-                  {urlErrors.imageURL}
+                  {urlErrors.imageUrl}
                 </p>
               )}
             </div>
@@ -1125,6 +1131,17 @@ const InstanceConfigurationPage: NextPage = () => {
                 </div>
 
                 <div>
+                  <Label className="text-gray-600">User Count</Label>
+                  <p className="text-sm">
+                    {isUserCountLoading
+                      ? "Loading..."
+                      : typeof userCountData === "number"
+                      ? userCountData
+                      : "Not available"}
+                  </p>
+                </div>
+
+                <div>
                   <Label className="text-gray-600">Link</Label>
                   <p className="text-sm break-all">
                     {config.link || "Not set"}
@@ -1141,7 +1158,7 @@ const InstanceConfigurationPage: NextPage = () => {
                 <div>
                   <Label className="text-gray-600">Image URL</Label>
                   <p className="text-sm break-all">
-                    {config.imageURL || "Not set"}
+                    {config.imageUrl || "Not set"}
                   </p>
                 </div>
 
