@@ -114,7 +114,13 @@ export interface InstanceConfigSettingsDto {
    * @type {object}
    * @memberof InstanceConfigSettingsDto
    */
-  metadata: object | null;
+  details: object | null;
+  /**
+   *
+   * @type {string}
+   * @memberof InstanceConfigSettingsDto
+   */
+  updatedAt?: string | null;
 }
 
 /**
@@ -231,14 +237,14 @@ export function instanceOfInstanceConfigSettingsDto(value: object): boolean {
 }
 
 export function InstanceConfigSettingsDtoFromJSON(
-  json: any
+  json: any,
 ): InstanceConfigSettingsDto {
   return InstanceConfigSettingsDtoFromJSONTyped(json, false);
 }
 
 export function InstanceConfigSettingsDtoFromJSONTyped(
   json: any,
-  ignoreDiscriminator: boolean
+  ignoreDiscriminator: boolean,
 ): InstanceConfigSettingsDto {
   if (json === undefined || json === null) {
     return json;
@@ -260,12 +266,13 @@ export function InstanceConfigSettingsDtoFromJSONTyped(
     defaultCourierPayRate: json["defaultCourierPayRate"],
     defaultMinimumCourierPay: json["defaultMinimumCourierPay"],
     defaultMaxWorkingHours: json["defaultMaxWorkingHours"],
-    metadata: json["metadata"],
+    details: json["details"],
+    updatedAt: !exists(json, "updatedAt") ? undefined : json["updatedAt"],
   };
 }
 
 export function InstanceConfigSettingsDtoToJSON(
-  value?: InstanceConfigSettingsDto | null
+  value?: InstanceConfigSettingsDto | null,
 ): any {
   if (value === undefined) {
     return undefined;
@@ -290,6 +297,7 @@ export function InstanceConfigSettingsDtoToJSON(
     defaultCourierPayRate: value.defaultCourierPayRate,
     defaultMinimumCourierPay: value.defaultMinimumCourierPay,
     defaultMaxWorkingHours: value.defaultMaxWorkingHours,
-    metadata: value.metadata,
+    details: value.details,
+    updatedAt: value.updatedAt,
   };
 }

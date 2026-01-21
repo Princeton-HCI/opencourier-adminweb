@@ -3,21 +3,10 @@ import {
   useGetInstanceConfigQuery,
   useSetInstanceConfigMutation,
 } from "@/api/configApi";
+import { useGetUserCountQuery } from "@/api/userApi";
 import { DefaultLayout } from "@/components/layouts/DefaultLayout";
 import type { NextPage } from "next";
-import { InstanceConfigSettingsAdminInput } from "@/backend-admin-sdk";
-import { useForm } from "react-hook-form";
-import {
-  Input,
-  Label,
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  useToast,
-} from "@/admin-web-components";
+import { Input, Label, useToast } from "@/admin-web-components";
 import {
   COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN,
   COURIER_DIETARY_RESTRICTIONS_TO_HUMAN,
@@ -28,6 +17,7 @@ import {
   GEO_CALCULATION_TYPE_TO_HUMAN,
   QUOTE_CALCULATION_TYPE_TO_HUMAN,
 } from "@/shared-types";
+import { normalizeRegionForRegistry } from "@/utils/geoJsonUtils";
 import {
   openModal,
   closeModal,
@@ -35,7 +25,7 @@ import {
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
-import { union, featureCollection } from "@turf/turf";
+import { featureCollection } from "@turf/turf";
 import ReactMarkdown from "react-markdown";
 
 const AdminMap = dynamic(() => import("@/components/Map"), {
@@ -65,25 +55,19 @@ const sanitizeURL = (url: string): string => {
 const InstanceConfigurationPage: NextPage = () => {
   const instanceConfigOptionsResponse = useGetInstanceConfigOptionsQuery({});
   const instanceConfigResponse = useGetInstanceConfigQuery({});
+  const { data: userCountData, isLoading: isUserCountLoading } =
+    useGetUserCountQuery();
   const [setInstanceConfigMutation] = useSetInstanceConfigMutation();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  const hostname = window.location.origin;
+  const [isRegistering, setIsRegistering] = useState(false);
   const [urlErrors, setUrlErrors] = useState<{
     link?: string;
     websocketLink?: string;
-    imageURL?: string;
+    imageUrl?: string;
   }>({});
-  const form = useForm({
-    defaultValues: {
-      name: "",
-      domainUrl: hostname,
-      descriptionURL: "",
-      termsOfServiceUrl: `${hostname}/termsofservice.html`,
-      privacyPolicyUrl: `${hostname}/privacypolicy.html`,
-      contactEmail: "",
-    },
-  });
+  const [registryLink, setRegistryLink] = useState("");
+  const [registryLinkError, setRegistryLinkError] = useState("");
 
   const regionDataRef = useRef<any>(null);
 
@@ -92,7 +76,7 @@ const InstanceConfigurationPage: NextPage = () => {
     name: "",
     link: "",
     websocketLink: "",
-    imageURL: "",
+    imageUrl: "",
     region: null,
     courierMatcherType: "",
     quoteCalculationType: "",
@@ -116,20 +100,26 @@ const InstanceConfigurationPage: NextPage = () => {
   const [rulesContent, setRulesContent] = useState("");
   const [descriptionContent, setDescriptionContent] = useState("");
   const [currentView, setCurrentView] = useState<
-    "main" | "privacy-policy" | "terms-of-service" | "rules" | "description"
+    | "main"
+    | "privacy-policy"
+    | "terms-of-service"
+    | "rules"
+    | "description"
+    | "registration"
   >("main");
 
   // Sync server data to local state
   useEffect(() => {
     const data = instanceConfigResponse.data;
+    console.log(data);
     if (data) {
-      const metadata = (data.metadata as any) || {};
+      const details = (data.details as any) || {};
       setConfig({
-        name: metadata.name ?? "",
-        link: metadata.link ?? "",
-        websocketLink: metadata.websocketLink ?? "",
-        imageURL: metadata.imageURL ?? "",
-        region: metadata.region ?? null,
+        name: details.name ?? "",
+        link: details.link ?? "",
+        websocketLink: details.websocketLink ?? "",
+        imageUrl: details.imageUrl ?? "",
+        region: details.region ?? null,
         courierMatcherType: data.courierMatcherType ?? "",
         quoteCalculationType: data.quoteCalculationType ?? "",
         geoCalculationType: data.geoCalculationType ?? "",
@@ -152,10 +142,10 @@ const InstanceConfigurationPage: NextPage = () => {
         defaultMaxWorkingHours: data.defaultMaxWorkingHours ?? 0,
         feePercentageAmount: data.feePercentageAmount ?? 0,
       });
-      setPrivacyPolicyContent(metadata.privacyPolicyContent ?? "");
-      setTermsOfServiceContent(metadata.termsOfServiceContent ?? "");
-      setRulesContent(metadata.rulesContent ?? "");
-      setDescriptionContent(metadata.descriptionContent ?? "");
+      setPrivacyPolicyContent(details.privacyPolicyContent ?? "");
+      setTermsOfServiceContent(details.termsOfServiceContent ?? "");
+      setRulesContent(details.rulesContent ?? "");
+      setDescriptionContent(details.descriptionContent ?? "");
     }
   }, [instanceConfigResponse.data]);
 
@@ -177,12 +167,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSavePrivacyPolicy = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           privacyPolicyContent: privacyPolicyContent.trim(),
         },
       } as any);
@@ -208,12 +198,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveTermsOfService = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           termsOfServiceContent: termsOfServiceContent.trim(),
         },
       } as any);
@@ -239,12 +229,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveRules = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           rulesContent: rulesContent.trim(),
         },
       } as any);
@@ -270,12 +260,12 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveDescription = async () => {
     setIsSaving(true);
     try {
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       await setInstanceConfigMutation({
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           descriptionContent: descriptionContent.trim(),
         },
       } as any);
@@ -303,7 +293,7 @@ const InstanceConfigurationPage: NextPage = () => {
       config.name.trim() !== "" &&
       config.link.trim() !== "" &&
       config.websocketLink.trim() !== "" &&
-      config.imageURL.trim() !== "" &&
+      config.imageUrl.trim() !== "" &&
       config.region !== null &&
       config.defaultDietaryRestrictions.length > 0
     );
@@ -312,16 +302,16 @@ const InstanceConfigurationPage: NextPage = () => {
   const handleSaveAllChanges = async () => {
     setIsSaving(true);
     try {
-      const { name, link, websocketLink, imageURL, region, ...restConfig } =
+      const { name, link, websocketLink, imageUrl, region, ...restConfig } =
         config;
-      const existingMetadata =
-        (instanceConfigResponse.data?.metadata as any) || {};
+      const existingDetails =
+        (instanceConfigResponse.data?.details as any) || {};
 
       // Sanitize and trim URL fields
       const sanitizedName = name.trim();
       const sanitizedLink = sanitizeURL(link.trim());
       const sanitizedWebsocketLink = sanitizeURL(websocketLink.trim());
-      const sanitizedImageURL = sanitizeURL(imageURL.trim());
+      const sanitizedImageUrl = sanitizeURL(imageUrl.trim());
 
       // Update config state with sanitized values
       setConfig({
@@ -329,7 +319,7 @@ const InstanceConfigurationPage: NextPage = () => {
         name: sanitizedName,
         link: sanitizedLink,
         websocketLink: sanitizedWebsocketLink,
-        imageURL: sanitizedImageURL,
+        imageUrl: sanitizedImageUrl,
       });
 
       // Process region data - keep as FeatureCollection for individual polygon editing
@@ -355,12 +345,12 @@ const InstanceConfigurationPage: NextPage = () => {
 
       await setInstanceConfigMutation({
         ...restConfig,
-        metadata: {
-          ...existingMetadata,
+        details: {
+          ...existingDetails,
           name: sanitizedName,
           link: sanitizedLink,
           websocketLink: sanitizedWebsocketLink,
-          imageURL: sanitizedImageURL,
+          imageUrl: sanitizedImageUrl,
           privacyPolicyUrl: computedURLs.privacyPolicyUrl,
           termsOfServiceUrl: computedURLs.termsOfServiceUrl,
           rulesUrl: computedURLs.rulesUrl,
@@ -386,8 +376,109 @@ const InstanceConfigurationPage: NextPage = () => {
     }
   };
 
-  const onSubmit = (data: any) => {
-    console.log(data);
+  const handleRegistryLinkChange = (value: string) => {
+    setRegistryLink(value);
+    if (value && !validateURL(value)) {
+      setRegistryLinkError("Invalid URL format");
+    } else {
+      setRegistryLinkError("");
+    }
+  };
+
+  const handleRegisterSubmit = async () => {
+    const sanitizedRegistryUrl = sanitizeURL(registryLink.trim());
+
+    if (!sanitizedRegistryUrl) {
+      setRegistryLinkError("Registry link is required");
+      return;
+    }
+
+    if (!validateURL(sanitizedRegistryUrl)) {
+      setRegistryLinkError("Invalid URL format");
+      return;
+    }
+
+    // Refetch latest config data to ensure we have the most recent updatedAt timestamp
+    await instanceConfigResponse.refetch();
+
+    // Normalize region: Convert FeatureCollection to Polygon/MultiPolygon for PostGIS
+    const normalizedRegion = normalizeRegionForRegistry(config.region);
+
+    const registrationData = {
+      details: {
+        name: config.name,
+        link: config.link,
+        websocketLink: config.websocketLink,
+        region: normalizedRegion,
+        imageUrl: config.imageUrl,
+        rulesUrl: computedURLs.rulesUrl,
+        descriptionUrl: computedURLs.descriptionUrl,
+        privacyPolicyUrl: computedURLs.privacyPolicyUrl,
+        termsOfServiceUrl: computedURLs.termsOfServiceUrl,
+        userCount: typeof userCountData === "number" ? userCountData : null,
+      },
+      config: {
+        courierMatcherType: config.courierMatcherType,
+        quoteCalculationType: config.quoteCalculationType,
+        geoCalculationType: config.geoCalculationType,
+        deliveryDurationCalculationType: config.deliveryDurationCalculationType,
+        courierCompensationCalculationType:
+          config.courierCompensationCalculationType,
+        maxAssignmentDistance: config.maxAssignmentDistance,
+        maxDriftDistance: config.maxDriftDistance,
+        quoteExpirationMinutes: config.quoteExpirationMinutes,
+        feePercentageAmount: config.feePercentageAmount,
+        defaultCourierPayRate: config.defaultCourierPayRate,
+        defaultMinimumCourierPay: config.defaultMinimumCourierPay,
+        defaultMaxWorkingHours: config.defaultMaxWorkingHours,
+        defaultDietaryRestrictions: config.defaultDietaryRestrictions,
+        distanceUnit: config.distanceUnit,
+        currency: config.currency,
+      },
+      updatedAt: instanceConfigResponse.data?.updatedAt ?? null,
+    };
+
+    console.log("Registration payload:", registrationData);
+
+    setIsRegistering(true);
+
+    try {
+      const response = await fetch(`${sanitizedRegistryUrl}/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(registrationData),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        const message =
+          errorBody?.error ||
+          errorBody?.message ||
+          `Registry responded with ${response.status}`;
+        throw new Error(message);
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Success!",
+        description:
+          result?.message || "Instance registered successfully with registry.",
+      });
+
+      console.log("Registry registration payload", registrationData, result);
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error?.message || "Could not register instance.",
+        variant: "destructive",
+      });
+      console.error("Failed to register instance:", error);
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   // Compute URL fields based on instance link
@@ -412,7 +503,7 @@ const InstanceConfigurationPage: NextPage = () => {
   }, []);
 
   const handleURLFieldChange = (
-    field: "link" | "websocketLink" | "imageURL",
+    field: "link" | "websocketLink" | "imageUrl",
     value: string,
   ) => {
     setConfig({ ...config, [field]: value });
@@ -428,140 +519,22 @@ const InstanceConfigurationPage: NextPage = () => {
   return (
     <DefaultLayout>
       {/* Header and Edit Links - Always Visible */}
-      <div className="flex justify-between">
-        <h2 className="text-3xl font-medium tracking-tight pb-1">
+      <div className="flex items-center gap-4">
+        <h2 className="text-3xl font-medium tracking-tight pb-2">
           Instance Configuration
         </h2>
+        {currentView !== "main" && (
+          <button
+            className="bg-gray-200 rounded-md text-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-300"
+            onClick={() => setCurrentView("main")}
+          >
+            ← Back
+          </button>
+        )}
         {currentView === "main" && (
           <button
             className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700"
-            onClick={() =>
-              openModal({
-                id: "instance-registration-modal",
-                title: "Instance Registration Form",
-                description:
-                  "Register your instance to the instance registry, so that users can discover it!",
-                children: (
-                  <Form {...form}>
-                    <form
-                      onSubmit={form.handleSubmit(onSubmit)}
-                      className="flex flex-col gap-4"
-                    >
-                      {/* Instance Name */}
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Instance Name</FormLabel>
-                            <FormControl>
-                              <input
-                                type="text"
-                                {...field}
-                                className="mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Instance Domain URL */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Instance Domain URL</FormLabel>
-                        <FormControl>
-                          <input
-                            type="text"
-                            value={hostname}
-                            readOnly
-                            className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                          />
-                        </FormControl>
-                      </FormItem>
-
-                      {/* Instance Description */}
-                      <FormField
-                        control={form.control}
-                        name="descriptionURL"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Instance Description</FormLabel>
-                            <FormControl>
-                              <input
-                                type="text"
-                                value={`${hostname}/description.html`}
-                                readOnly
-                                className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Geographic Region */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Geographic Region</FormLabel>
-                        <p className="text-gray-600">placeholder for now</p>
-                      </FormItem>
-
-                      {/* Terms of Service URL */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Terms of Service URL</FormLabel>
-                        <FormControl>
-                          <input
-                            type="text"
-                            value={`${hostname}/termsofservice.html`}
-                            readOnly
-                            className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                          />
-                        </FormControl>
-                      </FormItem>
-
-                      {/* Privacy Policy URL */}
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Privacy Policy URL</FormLabel>
-                        <FormControl>
-                          <input
-                            type="text"
-                            value={`${hostname}/privacypolicy.html`}
-                            readOnly
-                            className="cursor-auto mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                          />
-                        </FormControl>
-                      </FormItem>
-
-                      {/* Admin Contact Email */}
-                      <FormField
-                        control={form.control}
-                        name="contactEmail"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Administrator Contact Email</FormLabel>
-                            <FormControl>
-                              <input
-                                type="email"
-                                {...field}
-                                className="mt-1 w-1/2 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-black focus:ring-black"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Submit */}
-                      <button
-                        type="submit"
-                        className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium w-fit hover:bg-slate-700"
-                      >
-                        Register
-                      </button>
-                    </form>
-                  </Form>
-                ),
-              })
-            }
+            onClick={() => setCurrentView("registration")}
           >
             Register Instance
           </button>
@@ -630,13 +603,11 @@ const InstanceConfigurationPage: NextPage = () => {
                 onChange={(event) =>
                   handleURLFieldChange("link", event.target.value)
                 }
-                disabled={
-                  !!(instanceConfigResponse.data?.metadata as any)?.link
-                }
+                disabled={!!(instanceConfigResponse.data?.details as any)?.link}
                 className={`max-w-[500px] ${
                   urlErrors.link ? "border-red-500 border-2" : ""
                 } ${
-                  !!(instanceConfigResponse.data?.metadata as any)?.link
+                  !!(instanceConfigResponse.data?.details as any)?.link
                     ? "bg-gray-100 cursor-not-allowed"
                     : ""
                 }`}
@@ -667,24 +638,24 @@ const InstanceConfigurationPage: NextPage = () => {
             <div>
               <Label className="text-right">Logo Image URL</Label>
               <Input
-                key="imageURL"
+                key="imageUrl"
                 type="text"
-                value={config.imageURL}
+                value={config.imageUrl}
                 onChange={(event) =>
-                  handleURLFieldChange("imageURL", event.target.value)
+                  handleURLFieldChange("imageUrl", event.target.value)
                 }
                 className={`max-w-[500px] ${
-                  urlErrors.imageURL ? "border-red-500 border-2" : ""
+                  urlErrors.imageUrl ? "border-red-500 border-2" : ""
                 }`}
               />
-              {urlErrors.imageURL && (
+              {urlErrors.imageUrl && (
                 <p className="text-red-500 text-sm mt-1">
-                  {urlErrors.imageURL}
+                  {urlErrors.imageUrl}
                 </p>
               )}
             </div>
             <div>
-              <Label className="text-right">Operating region</Label>
+              <Label className="text-right">Operating Region</Label>
               <div className="pt-2 max-w-4xl">
                 <AdminMap
                   initialGeoJSON={config.region}
@@ -693,7 +664,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </div>
             </div>
             <div>
-              <Label className="text-right">Courier matcher type</Label>
+              <Label className="text-right">Courier Matcher Type</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -712,7 +683,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Quote calculation type</Label>
+              <Label className="text-right">Quote Calculation Type</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -731,7 +702,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Geo calculation type</Label>
+              <Label className="text-right">Geo Calculation Type</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -751,7 +722,7 @@ const InstanceConfigurationPage: NextPage = () => {
             </div>
             <div>
               <Label className="text-right">
-                Delivery duration calculation type
+                Delivery Duration Calculation Type
               </Label>
               <br />
               <select
@@ -775,7 +746,7 @@ const InstanceConfigurationPage: NextPage = () => {
             </div>
             <div>
               <Label className="text-right">
-                Courier compensation calculation type
+                Courier Compensation Calculation Type
               </Label>
               <br />
               <select
@@ -798,7 +769,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Dietary restrictions</Label>
+              <Label className="text-right">Default Dietary Restrictions</Label>
               <p className="text-sm text-gray-600 mb-1">(Select multiple)</p>
               <select
                 className="border-[1px] border-input rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -835,7 +806,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Distance unit</Label>
+              <Label className="text-right">Distance Unit</Label>
               <br />
               <select
                 className="border-[1px] border-input rounded-md h-10 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -854,7 +825,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </select>
             </div>
             <div>
-              <Label className="text-right">Max assignment distance</Label>
+              <Label className="text-right">Max Assignment Distance</Label>
               <Input
                 key="maxAssignmentDistance"
                 type="number"
@@ -869,7 +840,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Max drift distance</Label>
+              <Label className="text-right">Max Drift Distance</Label>
               <p className="text-sm text-gray-600 mb-1">
                 (Maximum amount of distance that the quote and delivery pickup
                 can differ in meters)
@@ -888,7 +859,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Quote expiration minutes</Label>
+              <Label className="text-right">Quote Expiration Minutes</Label>
               <Input
                 key="quoteExpirationMinutes"
                 type="number"
@@ -903,7 +874,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Default courier pay rate</Label>
+              <Label className="text-right">Default Courier Pay Rate</Label>
               <Input
                 key="defaultCourierPayRate"
                 type="number"
@@ -918,7 +889,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Default minimum courier pay</Label>
+              <Label className="text-right">Default Minimum Courier Pay</Label>
               <Input
                 key="defaultMinimumCourierPay"
                 type="number"
@@ -933,7 +904,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Default max working hours</Label>
+              <Label className="text-right">Default Max Working Hours</Label>
               <Input
                 key="defaultMaxWorkingHours"
                 type="number"
@@ -948,7 +919,7 @@ const InstanceConfigurationPage: NextPage = () => {
               />
             </div>
             <div>
-              <Label className="text-right">Fee percentage amount</Label>
+              <Label className="text-right">Fee Percentage Amount</Label>
               <Input
                 key="feePercentageAmount"
                 type="number"
@@ -976,7 +947,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </button>
         </>
       ) : currentView === "terms-of-service" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">
             Editing Terms of Service
           </h3>
@@ -1016,7 +987,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSaveTermsOfService}
               disabled={isSaving}
@@ -1033,7 +1004,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
         </div>
       ) : currentView === "rules" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">Editing Rules</h3>
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
@@ -1071,7 +1042,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSaveRules}
               disabled={isSaving}
@@ -1088,7 +1059,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
         </div>
       ) : currentView === "description" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">Editing Description</h3>
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
@@ -1126,7 +1097,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSaveDescription}
               disabled={isSaving}
@@ -1143,7 +1114,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
         </div>
       ) : currentView === "privacy-policy" ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold pb-2">Editing Privacy Policy</h3>
           <div className="grid grid-cols-2 gap-6">
             {/* Editor */}
@@ -1181,7 +1152,7 @@ const InstanceConfigurationPage: NextPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={handleSavePrivacyPolicy}
               disabled={isSaving}
@@ -1194,6 +1165,260 @@ const InstanceConfigurationPage: NextPage = () => {
               className="bg-gray-200 rounded-md text-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-300"
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      ) : currentView === "registration" ? (
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold pb-2">Instance Registration</h3>
+          <p className="text-gray-600 mb-4 text-sm">
+            Register your instance to an instance registry, so that couriers can
+            more easily discover it!
+          </p>
+
+          <div className="flex flex-col gap-4">
+            {/* Registry Link Input */}
+            <div className="flex flex-col">
+              <Label className="mb-2">Registry Link</Label>
+              <Input
+                type="text"
+                value={registryLink}
+                onChange={(e) => handleRegistryLinkChange(e.target.value)}
+                className={`max-w-[500px] ${
+                  registryLinkError ? "border-red-500 border-2" : ""
+                }`}
+                placeholder="https://registry.example.com"
+              />
+              {registryLinkError && (
+                <p className="text-red-500 text-sm mt-1">{registryLinkError}</p>
+              )}
+            </div>
+
+            {/* Display Saved Configuration */}
+            <div className="">
+              <h3 className="text-lg font-semibold mb-2">
+                Current Instance Configuration
+              </h3>
+              <h3 className="text-gray-600 text-md font-semibold mb-2">
+                Details
+              </h3>
+              <div className="w-2/3 grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <Label className="text-gray-600">Name</Label>
+                  <p className="text-sm">{config.name}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">User Count</Label>
+                  <p className="text-sm">
+                    {isUserCountLoading
+                      ? "Loading..."
+                      : typeof userCountData === "number"
+                      ? userCountData
+                      : "Not available"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">URL</Label>
+                  <p className="text-sm break-all">{config.link}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Websocket URL</Label>
+                  <p className="text-sm break-all">{config.websocketLink}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Logo Image URL</Label>
+                  <p className="text-sm break-all">{config.imageUrl}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Privacy Policy URL</Label>
+                  <p className="text-sm break-all">
+                    {computedURLs.privacyPolicyUrl}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Terms of Service URL</Label>
+                  <p className="text-sm break-all">
+                    {computedURLs.termsOfServiceUrl}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Rules URL</Label>
+                  <p className="text-sm break-all">{computedURLs.rulesUrl}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Description URL</Label>
+                  <p className="text-sm break-all">
+                    {computedURLs.descriptionUrl}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-gray-600 mb-2 block">
+                    Operating Region
+                  </Label>
+                  {config.region ? (
+                    <div className="h-40 w-full">
+                      <AdminMap
+                        initialGeoJSON={config.region}
+                        onUpdate={() => {}}
+                        readOnly={true}
+                        height="h-40"
+                        width="w-full"
+                        fitPadding={[12, 12]}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm">Not set</p>
+                  )}
+                </div>
+              </div>
+              <h3 className="text-gray-600 text-md font-semibold mb-2 mt-6">
+                Config
+              </h3>
+              <div className="w-2/3 grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <Label className="text-gray-600">Courier Matcher Type</Label>
+                  <p className="text-sm">
+                    {
+                      COURIER_MATCHER_TYPE_TO_HUMAN[
+                        config.courierMatcherType as keyof typeof COURIER_MATCHER_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Quote Calculation Type
+                  </Label>
+                  <p className="text-sm">
+                    {
+                      QUOTE_CALCULATION_TYPE_TO_HUMAN[
+                        config.quoteCalculationType as keyof typeof QUOTE_CALCULATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Geo Calculation Type</Label>
+                  <p className="text-sm">
+                    {
+                      GEO_CALCULATION_TYPE_TO_HUMAN[
+                        config.geoCalculationType as keyof typeof GEO_CALCULATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Delivery Duration Calculation Type
+                  </Label>
+                  <p className="text-sm">
+                    {
+                      DELIVERY_DURATION_CALCULATION_TYPE_TO_HUMAN[
+                        config.deliveryDurationCalculationType as keyof typeof DELIVERY_DURATION_CALCULATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Courier Compensation Calculation Type
+                  </Label>
+                  <p className="text-sm">
+                    {
+                      COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN[
+                        config.courierCompensationCalculationType as keyof typeof COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Max Assignment Distance
+                  </Label>
+                  <p className="text-sm">{config.maxAssignmentDistance}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Max Drift Distance</Label>
+                  <p className="text-sm">{config.maxDriftDistance}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Quote Expiration Minutes
+                  </Label>
+                  <p className="text-sm">{config.quoteExpirationMinutes}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Fee Percentage Amount</Label>
+                  <p className="text-sm">{config.feePercentageAmount}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Courier Pay Rate
+                  </Label>
+                  <p className="text-sm">{config.defaultCourierPayRate}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Minimum Courier Pay
+                  </Label>
+                  <p className="text-sm">{config.defaultMinimumCourierPay}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Max Working Hours
+                  </Label>
+                  <p className="text-sm">{config.defaultMaxWorkingHours}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">
+                    Default Dietary Restrictions
+                  </Label>
+                  <p className="text-sm">
+                    {config.defaultDietaryRestrictions
+                      .map(
+                        (restriction) =>
+                          COURIER_DIETARY_RESTRICTIONS_TO_HUMAN[
+                            restriction as keyof typeof COURIER_DIETARY_RESTRICTIONS_TO_HUMAN
+                          ],
+                      )
+                      .join(", ")}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Distance Unit</Label>
+                  <p className="text-sm">
+                    {
+                      DISTANCE_UNIT_TO_HUMAN[
+                        config.distanceUnit as keyof typeof DISTANCE_UNIT_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-600">Currency</Label>
+                  <p className="text-sm">
+                    {
+                      CURRENCY_TO_HUMAN[
+                        config.currency as keyof typeof CURRENCY_TO_HUMAN
+                      ]
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-4">
+            <h3 className="text-sm text-gray-600 mb-1">
+              Please double-check this information before registering!
+            </h3>
+            <button
+              onClick={handleRegisterSubmit}
+              disabled={!registryLink || !!registryLinkError || isRegistering}
+              className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRegistering ? "Registering..." : "Register"}
             </button>
           </div>
         </div>
