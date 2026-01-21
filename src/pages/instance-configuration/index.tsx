@@ -6,7 +6,6 @@ import {
 import { useGetUserCountQuery } from "@/api/userApi";
 import { DefaultLayout } from "@/components/layouts/DefaultLayout";
 import type { NextPage } from "next";
-import { InstanceConfigSettingsAdminInput } from "@/backend-admin-sdk";
 import { Input, Label, useToast } from "@/admin-web-components";
 import {
   COURIER_DELIVERY_COMPENSATION_TYPE_TO_HUMAN,
@@ -18,6 +17,7 @@ import {
   GEO_CALCULATION_TYPE_TO_HUMAN,
   QUOTE_CALCULATION_TYPE_TO_HUMAN,
 } from "@/shared-types";
+import { normalizeRegionForRegistry } from "@/utils/geoJsonUtils";
 import {
   openModal,
   closeModal,
@@ -25,7 +25,7 @@ import {
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
-import { union, featureCollection } from "@turf/turf";
+import { featureCollection } from "@turf/turf";
 import ReactMarkdown from "react-markdown";
 
 const AdminMap = dynamic(() => import("@/components/Map"), {
@@ -60,7 +60,7 @@ const InstanceConfigurationPage: NextPage = () => {
   const [setInstanceConfigMutation] = useSetInstanceConfigMutation();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  const hostname = window.location.origin;
+  const [isRegistering, setIsRegistering] = useState(false);
   const [urlErrors, setUrlErrors] = useState<{
     link?: string;
     websocketLink?: string;
@@ -385,15 +385,32 @@ const InstanceConfigurationPage: NextPage = () => {
     }
   };
 
-  const handleRegisterSubmit = () => {
-    const details = (instanceConfigResponse.data?.details as any) || {};
+  const handleRegisterSubmit = async () => {
+    const sanitizedRegistryUrl = sanitizeURL(registryLink.trim());
+
+    if (!sanitizedRegistryUrl) {
+      setRegistryLinkError("Registry link is required");
+      return;
+    }
+
+    if (!validateURL(sanitizedRegistryUrl)) {
+      setRegistryLinkError("Invalid URL format");
+      return;
+    }
+
+    // Refetch latest config data to ensure we have the most recent updatedAt timestamp
+    await instanceConfigResponse.refetch();
+
+    // Normalize region: Convert FeatureCollection to Polygon/MultiPolygon for PostGIS
+    const normalizedRegion = normalizeRegionForRegistry(config.region);
+
     const registrationData = {
       details: {
-        name: details.name,
-        link: details.link,
-        websocketLink: details.websocketLink,
-        region: details.region,
-        imageUrl: details.imageUrl,
+        name: config.name,
+        link: config.link,
+        websocketLink: config.websocketLink,
+        region: normalizedRegion,
+        imageUrl: config.imageUrl,
         rulesUrl: computedURLs.rulesUrl,
         descriptionUrl: computedURLs.descriptionUrl,
         privacyPolicyUrl: computedURLs.privacyPolicyUrl,
@@ -418,8 +435,50 @@ const InstanceConfigurationPage: NextPage = () => {
         distanceUnit: config.distanceUnit,
         currency: config.currency,
       },
+      updatedAt: instanceConfigResponse.data?.updatedAt ?? null,
     };
-    console.log("registering", sanitizeURL(registryLink), registrationData);
+
+    console.log("Registration payload:", registrationData);
+
+    setIsRegistering(true);
+
+    try {
+      const response = await fetch(`${sanitizedRegistryUrl}/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(registrationData),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        const message =
+          errorBody?.error ||
+          errorBody?.message ||
+          `Registry responded with ${response.status}`;
+        throw new Error(message);
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Success!",
+        description:
+          result?.message || "Instance registered successfully with registry.",
+      });
+
+      console.log("Registry registration payload", registrationData, result);
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error?.message || "Could not register instance.",
+        variant: "destructive",
+      });
+      console.error("Failed to register instance:", error);
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   // Compute URL fields based on instance link
@@ -1356,10 +1415,10 @@ const InstanceConfigurationPage: NextPage = () => {
             </h3>
             <button
               onClick={handleRegisterSubmit}
-              disabled={!registryLink || !!registryLinkError}
+              disabled={!registryLink || !!registryLinkError || isRegistering}
               className="bg-black rounded-md text-white px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Register
+              {isRegistering ? "Registering..." : "Register"}
             </button>
           </div>
         </div>

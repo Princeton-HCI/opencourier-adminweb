@@ -115,6 +115,12 @@ export interface InstanceConfigSettingsDto {
    * @memberof InstanceConfigSettingsDto
    */
   details: object | null;
+  /**
+   *
+   * @type {string}
+   * @memberof InstanceConfigSettingsDto
+   */
+  updatedAt?: string | null;
 }
 
 /**
@@ -231,14 +237,14 @@ export function instanceOfInstanceConfigSettingsDto(value: object): boolean {
 }
 
 export function InstanceConfigSettingsDtoFromJSON(
-  json: any
+  json: any,
 ): InstanceConfigSettingsDto {
   return InstanceConfigSettingsDtoFromJSONTyped(json, false);
 }
 
 export function InstanceConfigSettingsDtoFromJSONTyped(
   json: any,
-  ignoreDiscriminator: boolean
+  ignoreDiscriminator: boolean,
 ): InstanceConfigSettingsDto {
   if (json === undefined || json === null) {
     return json;
@@ -261,11 +267,12 @@ export function InstanceConfigSettingsDtoFromJSONTyped(
     defaultMinimumCourierPay: json["defaultMinimumCourierPay"],
     defaultMaxWorkingHours: json["defaultMaxWorkingHours"],
     details: json["details"],
+    updatedAt: !exists(json, "updatedAt") ? undefined : json["updatedAt"],
   };
 }
 
 export function InstanceConfigSettingsDtoToJSON(
-  value?: InstanceConfigSettingsDto | null
+  value?: InstanceConfigSettingsDto | null,
 ): any {
   if (value === undefined) {
     return undefined;
@@ -291,5 +298,6 @@ export function InstanceConfigSettingsDtoToJSON(
     defaultMinimumCourierPay: value.defaultMinimumCourierPay,
     defaultMaxWorkingHours: value.defaultMaxWorkingHours,
     details: value.details,
+    updatedAt: value.updatedAt,
   };
 }
