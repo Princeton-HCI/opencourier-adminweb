@@ -17,7 +17,7 @@ import {
   GEO_CALCULATION_TYPE_TO_HUMAN,
   QUOTE_CALCULATION_TYPE_TO_HUMAN,
 } from "@/shared-types";
-import { normalizeRegionForRegistry } from "@/utils/geoJsonUtils";
+import { normalizeRegionForPostGIS } from "@/utils/geoJsonUtils";
 import {
   openModal,
   closeModal,
@@ -465,7 +465,7 @@ const InstanceConfigurationPage: NextPage = () => {
     await instanceConfigResponse.refetch();
 
     // Normalize region: Convert FeatureCollection to Polygon/MultiPolygon for PostGIS
-    const normalizedRegion = normalizeRegionForRegistry(config.region);
+    const normalizedRegion = normalizeRegionForPostGIS(config.region);
 
     const registrationData = {
       details: {
