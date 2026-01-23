@@ -121,6 +121,12 @@ export interface InstanceConfigSettingsDto {
    * @memberof InstanceConfigSettingsDto
    */
   updatedAt?: string | null;
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof InstanceConfigSettingsDto
+   */
+  registeredRegistries?: string[];
 }
 
 /**
@@ -268,6 +274,9 @@ export function InstanceConfigSettingsDtoFromJSONTyped(
     defaultMaxWorkingHours: json["defaultMaxWorkingHours"],
     details: json["details"],
     updatedAt: !exists(json, "updatedAt") ? undefined : json["updatedAt"],
+    registeredRegistries: !exists(json, "registeredRegistries")
+      ? undefined
+      : (json["registeredRegistries"] as string[]),
   };
 }
 
@@ -299,5 +308,6 @@ export function InstanceConfigSettingsDtoToJSON(
     defaultMaxWorkingHours: value.defaultMaxWorkingHours,
     details: value.details,
     updatedAt: value.updatedAt,
+    registeredRegistries: value.registeredRegistries,
   };
 }

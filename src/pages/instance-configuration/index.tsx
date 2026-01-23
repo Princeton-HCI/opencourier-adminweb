@@ -68,6 +68,17 @@ const InstanceConfigurationPage: NextPage = () => {
   }>({});
   const [registryLink, setRegistryLink] = useState("");
   const [registryLinkError, setRegistryLinkError] = useState("");
+  const [registryStatusMap, setRegistryStatusMap] = useState<
+    Record<
+      string,
+      {
+        status: string;
+        reason: string | null;
+        createdAt: string | null;
+        lastFetchedAt: string | null;
+      }
+    >
+  >({});
 
   const regionDataRef = useRef<any>(null);
 
@@ -93,6 +104,7 @@ const InstanceConfigurationPage: NextPage = () => {
     defaultMinimumCourierPay: 0,
     defaultMaxWorkingHours: 0,
     feePercentageAmount: 0,
+    registeredRegistries: [] as string[],
   });
 
   const [privacyPolicyContent, setPrivacyPolicyContent] = useState("");
@@ -141,6 +153,9 @@ const InstanceConfigurationPage: NextPage = () => {
         defaultMinimumCourierPay: data.defaultMinimumCourierPay ?? 0,
         defaultMaxWorkingHours: data.defaultMaxWorkingHours ?? 0,
         feePercentageAmount: data.feePercentageAmount ?? 0,
+        registeredRegistries: Array.isArray(data.registeredRegistries)
+          ? data.registeredRegistries
+          : [],
       });
       setPrivacyPolicyContent(details.privacyPolicyContent ?? "");
       setTermsOfServiceContent(details.termsOfServiceContent ?? "");
@@ -385,8 +400,44 @@ const InstanceConfigurationPage: NextPage = () => {
     }
   };
 
+  const fetchRegistryStatus = useCallback(
+    async (registryUrl: string) => {
+      const sanitizedRegistryUrl = sanitizeURL(registryUrl.trim());
+      const sanitizedInstanceLink = sanitizeURL(config.link.trim());
+
+      if (!sanitizedInstanceLink) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${sanitizedRegistryUrl}/registrations?instanceLink=${encodeURIComponent(
+            sanitizedInstanceLink,
+          )}`,
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setRegistryStatusMap((prev) => ({
+            ...prev,
+            [sanitizedRegistryUrl]: {
+              status: data.status ?? "unknown",
+              reason: data.reason ?? null,
+              createdAt: data.createdAt ?? null,
+              lastFetchedAt: data.lastFetchedAt ?? null,
+            },
+          }));
+        }
+      } catch (error) {
+        // Silent error - just don't update status
+      }
+    },
+    [config.link],
+  );
+
   const handleRegisterSubmit = async () => {
     const sanitizedRegistryUrl = sanitizeURL(registryLink.trim());
+    const sanitizedInstanceLink = sanitizeURL(config.link.trim());
 
     if (!sanitizedRegistryUrl) {
       setRegistryLinkError("Registry link is required");
@@ -395,6 +446,15 @@ const InstanceConfigurationPage: NextPage = () => {
 
     if (!validateURL(sanitizedRegistryUrl)) {
       setRegistryLinkError("Invalid URL format");
+      return;
+    }
+
+    if (!sanitizedInstanceLink) {
+      toast({
+        title: "Error",
+        description: "Instance URL is required before registering.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -407,7 +467,7 @@ const InstanceConfigurationPage: NextPage = () => {
     const registrationData = {
       details: {
         name: config.name,
-        link: config.link,
+        link: sanitizedInstanceLink,
         websocketLink: config.websocketLink,
         region: normalizedRegion,
         imageUrl: config.imageUrl,
@@ -462,13 +522,34 @@ const InstanceConfigurationPage: NextPage = () => {
 
       const result = await response.json();
 
+      // Add to registered registries following the pattern of details
+      const updatedRegistries = [...config.registeredRegistries];
+      if (!updatedRegistries.includes(sanitizedRegistryUrl)) {
+        updatedRegistries.push(sanitizedRegistryUrl);
+      }
+
+      // Save to database following the pattern of details
+      await setInstanceConfigMutation({
+        registeredRegistries: updatedRegistries,
+      } as any);
+
+      // Update local config
+      setConfig({ ...config, registeredRegistries: updatedRegistries });
+
+      // Fetch status for this registry
+      await fetchRegistryStatus(sanitizedRegistryUrl);
+
+      // Clear input
+      setRegistryLink("");
+      setRegistryLinkError("");
+
       toast({
         title: "Success!",
         description:
           result?.message || "Instance registered successfully with registry.",
       });
 
-      console.log("Registry registration payload", registrationData, result);
+      console.log("Registry registration completed", registrationData, result);
     } catch (error: any) {
       toast({
         title: "Registration failed",
@@ -492,6 +573,13 @@ const InstanceConfigurationPage: NextPage = () => {
     };
   }, [config.link]);
 
+  // Load registry statuses when component mounts or registries change
+  useEffect(() => {
+    config.registeredRegistries.forEach((registryUrl) => {
+      fetchRegistryStatus(registryUrl);
+    });
+  }, [config.registeredRegistries, fetchRegistryStatus]);
+
   // Memoize the onUpdate callback to prevent map re-renders
   const handleMapUpdate = useCallback((val: any) => {
     regionDataRef.current = val;
@@ -514,6 +602,13 @@ const InstanceConfigurationPage: NextPage = () => {
       delete newErrors[field];
       setUrlErrors(newErrors);
     }
+  };
+
+  const getStatusBadgeClasses = (status: string) => {
+    const normalized = (status || "").toLowerCase();
+    if (normalized === "verified") return "bg-green-100 text-green-800";
+    if (normalized === "pending") return "bg-amber-100 text-amber-800";
+    return "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -1177,6 +1272,54 @@ const InstanceConfigurationPage: NextPage = () => {
           </p>
 
           <div className="flex flex-col gap-4">
+            {/* Registered Registries */}
+            <div className="flex flex-col gap-2 w-1/2">
+              <h4 className="text-md font-semibold">Registered Registries</h4>
+              {config.registeredRegistries.length === 0 ? (
+                <p className="text-sm text-gray-600">
+                  Not registered with any registry yet.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {config.registeredRegistries.map((registryUrl) => {
+                    const statusInfo = registryStatusMap[registryUrl];
+                    return (
+                      <div
+                        key={registryUrl}
+                        className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3 bg-white shadow-sm"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm font-semibold text-gray-900 break-all">
+                            {registryUrl}
+                          </p>
+                          {statusInfo && (
+                            <>
+                              <p className="text-xs text-gray-500">
+                                Created: {statusInfo.createdAt || "—"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Last fetched: {statusInfo.lastFetchedAt || "—"}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        {statusInfo && (
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClasses(
+                              statusInfo.status,
+                            )}`}
+                          >
+                            {statusInfo.status.charAt(0).toUpperCase() +
+                              statusInfo.status.slice(1).toLowerCase()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Registry Link Input */}
             <div className="flex flex-col">
               <Label className="mb-2">Registry Link</Label>

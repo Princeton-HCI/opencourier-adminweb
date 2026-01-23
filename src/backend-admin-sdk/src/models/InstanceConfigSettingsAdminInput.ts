@@ -115,6 +115,12 @@ export interface InstanceConfigSettingsAdminInput {
    * @memberof InstanceConfigSettingsAdminInput
    */
   details?: object;
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof InstanceConfigSettingsAdminInput
+   */
+  registeredRegistries?: string[];
 }
 
 /**
@@ -212,7 +218,7 @@ export type InstanceConfigSettingsAdminInputDefaultDietaryRestrictionsEnum =
  * Check if a given object implements the InstanceConfigSettingsAdminInput interface.
  */
 export function instanceOfInstanceConfigSettingsAdminInput(
-  value: object
+  value: object,
 ): boolean {
   let isInstance = true;
 
@@ -220,14 +226,14 @@ export function instanceOfInstanceConfigSettingsAdminInput(
 }
 
 export function InstanceConfigSettingsAdminInputFromJSON(
-  json: any
+  json: any,
 ): InstanceConfigSettingsAdminInput {
   return InstanceConfigSettingsAdminInputFromJSONTyped(json, false);
 }
 
 export function InstanceConfigSettingsAdminInputFromJSONTyped(
   json: any,
-  ignoreDiscriminator: boolean
+  ignoreDiscriminator: boolean,
 ): InstanceConfigSettingsAdminInput {
   if (json === undefined || json === null) {
     return json;
@@ -244,13 +250,13 @@ export function InstanceConfigSettingsAdminInputFromJSONTyped(
       : json["geoCalculationType"],
     deliveryDurationCalculationType: !exists(
       json,
-      "deliveryDurationCalculationType"
+      "deliveryDurationCalculationType",
     )
       ? undefined
       : json["deliveryDurationCalculationType"],
     courierCompensationCalculationType: !exists(
       json,
-      "courierCompensationCalculationType"
+      "courierCompensationCalculationType",
     )
       ? undefined
       : json["courierCompensationCalculationType"],
@@ -283,11 +289,14 @@ export function InstanceConfigSettingsAdminInputFromJSONTyped(
       ? undefined
       : json["defaultDietaryRestrictions"],
     details: !exists(json, "details") ? undefined : json["details"],
+    registeredRegistries: !exists(json, "registeredRegistries")
+      ? undefined
+      : (json["registeredRegistries"] as string[]),
   };
 }
 
 export function InstanceConfigSettingsAdminInputToJSON(
-  value?: InstanceConfigSettingsAdminInput | null
+  value?: InstanceConfigSettingsAdminInput | null,
 ): any {
   if (value === undefined) {
     return undefined;
@@ -313,5 +322,6 @@ export function InstanceConfigSettingsAdminInputToJSON(
     defaultMaxWorkingHours: value.defaultMaxWorkingHours,
     defaultDietaryRestrictions: value.defaultDietaryRestrictions,
     details: value.details,
+    registeredRegistries: value.registeredRegistries,
   };
 }
