@@ -61,6 +61,9 @@ const InstanceConfigurationPage: NextPage = () => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [unregisteringRegistryUrl, setUnregisteringRegistryUrl] = useState<
+    string | null
+  >(null);
   const [urlErrors, setUrlErrors] = useState<{
     link?: string;
     websocketLink?: string;
@@ -503,7 +506,7 @@ const InstanceConfigurationPage: NextPage = () => {
     setIsRegistering(true);
 
     try {
-      const response = await fetch(`${sanitizedRegistryUrl}/register`, {
+      const response = await fetch(`${sanitizedRegistryUrl}/registrations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -559,6 +562,71 @@ const InstanceConfigurationPage: NextPage = () => {
       console.error("Failed to register instance:", error);
     } finally {
       setIsRegistering(false);
+    }
+  };
+
+  const handleUnregister = async (registryUrl: string) => {
+    const sanitizedRegistryUrl = sanitizeURL(registryUrl.trim());
+    const sanitizedInstanceLink = sanitizeURL(config.link.trim());
+
+    if (!sanitizedInstanceLink) {
+      toast({
+        title: "Error",
+        description: "Instance URL is required before unregistering.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUnregisteringRegistryUrl(sanitizedRegistryUrl);
+
+    try {
+      const response = await fetch(
+        `${sanitizedRegistryUrl}/registrations?instanceLink=${encodeURIComponent(
+          sanitizedInstanceLink,
+        )}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok && response.status !== 404) {
+        const errorBody = await response.json().catch(() => null);
+        const message =
+          errorBody?.error ||
+          errorBody?.message ||
+          `Registry responded with ${response.status}`;
+        throw new Error(message);
+      }
+
+      const updatedRegistries = config.registeredRegistries.filter(
+        (url) => sanitizeURL(url.trim()) !== sanitizedRegistryUrl,
+      );
+
+      await setInstanceConfigMutation({
+        registeredRegistries: updatedRegistries,
+      } as any);
+
+      setConfig({ ...config, registeredRegistries: updatedRegistries });
+      setRegistryStatusMap((prev) => {
+        const next = { ...prev };
+        delete next[sanitizedRegistryUrl];
+        return next;
+      });
+
+      toast({
+        title: "Unregistered",
+        description: "Instance removed from registry.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Unregister failed",
+        description: error?.message || "Could not unregister instance.",
+        variant: "destructive",
+      });
+      console.error("Failed to unregister instance:", error);
+    } finally {
+      setUnregisteringRegistryUrl(null);
     }
   };
 
@@ -1303,16 +1371,31 @@ const InstanceConfigurationPage: NextPage = () => {
                             </>
                           )}
                         </div>
-                        {statusInfo && (
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClasses(
-                              statusInfo.status,
-                            )}`}
+                        <div className="flex flex-col justify-between h-full">
+                          {statusInfo && (
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClasses(
+                                statusInfo.status,
+                              )}`}
+                            >
+                              {statusInfo.status.charAt(0).toUpperCase() +
+                                statusInfo.status.slice(1).toLowerCase()}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleUnregister(registryUrl)}
+                            disabled={
+                              unregisteringRegistryUrl ===
+                                sanitizeURL(registryUrl.trim()) || isRegistering
+                            }
+                            className="bg-gray-200 rounded-md text-gray-900 px-2 py-1 text-xs font-medium hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {statusInfo.status.charAt(0).toUpperCase() +
-                              statusInfo.status.slice(1).toLowerCase()}
-                          </span>
-                        )}
+                            {unregisteringRegistryUrl ===
+                            sanitizeURL(registryUrl.trim())
+                              ? "Unregistering..."
+                              : "Unregister"}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
