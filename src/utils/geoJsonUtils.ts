@@ -2,7 +2,7 @@
  * Converts a FeatureCollection to a single Geometry (Polygon or MultiPolygon)
  * suitable for PostGIS storage via ST_GeomFromGeoJSON
  */
-export function normalizeRegionForRegistry(region: any): any {
+export function normalizeRegionForPostGIS(region: any): any {
   if (!region || typeof region !== "object") {
     return region;
   }
