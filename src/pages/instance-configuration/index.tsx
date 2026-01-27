@@ -1141,7 +1141,24 @@ const InstanceConfigurationPage: NextPage = () => {
               </h2>
               <div className="bg-white rounded-md border border-gray-200 p-4 prose prose-sm max-w-none overflow-y-auto h-96">
                 {termsOfServiceContent ? (
-                  <ReactMarkdown>{termsOfServiceContent}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      ul: ({ node, ...props }) => (
+                        <ul className="list-disc list-inside ml-4" {...props} />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol
+                          className="list-decimal list-inside ml-4"
+                          {...props}
+                        />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li className="mb-1" {...props} />
+                      ),
+                    }}
+                  >
+                    {termsOfServiceContent}
+                  </ReactMarkdown>
                 ) : (
                   <p className="text-gray-500">No content yet</p>
                 )}
@@ -1196,7 +1213,24 @@ const InstanceConfigurationPage: NextPage = () => {
               </h2>
               <div className="bg-white rounded-md border border-gray-200 p-4 prose prose-sm max-w-none overflow-y-auto h-96">
                 {rulesContent ? (
-                  <ReactMarkdown>{rulesContent}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      ul: ({ node, ...props }) => (
+                        <ul className="list-disc list-inside ml-4" {...props} />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol
+                          className="list-decimal list-inside ml-4"
+                          {...props}
+                        />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li className="mb-1" {...props} />
+                      ),
+                    }}
+                  >
+                    {rulesContent}
+                  </ReactMarkdown>
                 ) : (
                   <p className="text-gray-500">No content yet</p>
                 )}
@@ -1249,9 +1283,26 @@ const InstanceConfigurationPage: NextPage = () => {
               <h2 className="text-sm font-semibold text-gray-900 mb-3">
                 Preview
               </h2>
-              <div className="bg-white rounded-md border border-gray-200 p-4 prose prose-sm max-w-none overflow-y-auto h-96">
+              <div className="bg-white rounded-md border border-gray-200 p-4 max-w-none overflow-y-auto h-96">
                 {descriptionContent ? (
-                  <ReactMarkdown>{descriptionContent}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      ul: ({ node, ...props }) => (
+                        <ul className="list-disc list-inside ml-4" {...props} />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol
+                          className="list-decimal list-inside ml-4"
+                          {...props}
+                        />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li className="mb-1" {...props} />
+                      ),
+                    }}
+                  >
+                    {descriptionContent}
+                  </ReactMarkdown>
                 ) : (
                   <p className="text-gray-500">No content yet</p>
                 )}
@@ -1306,7 +1357,24 @@ const InstanceConfigurationPage: NextPage = () => {
               </h2>
               <div className="bg-white rounded-md border border-gray-200 p-4 prose prose-sm max-w-none overflow-y-auto h-96">
                 {privacyPolicyContent ? (
-                  <ReactMarkdown>{privacyPolicyContent}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      ul: ({ node, ...props }) => (
+                        <ul className="list-disc list-inside ml-4" {...props} />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol
+                          className="list-decimal list-inside ml-4"
+                          {...props}
+                        />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li className="mb-1" {...props} />
+                      ),
+                    }}
+                  >
+                    {privacyPolicyContent}
+                  </ReactMarkdown>
                 ) : (
                   <p className="text-gray-500">No content yet</p>
                 )}
