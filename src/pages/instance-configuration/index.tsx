@@ -28,6 +28,40 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { featureCollection } from "@turf/turf";
 import ReactMarkdown from "react-markdown";
 
+const MARKDOWN_COMPONENTS = {
+  ul: ({ node, ...props }: any) => (
+    <ul className="list-disc list-inside ml-4" {...props} />
+  ),
+  ol: ({ node, ...props }: any) => (
+    <ol className="list-decimal list-inside ml-4" {...props} />
+  ),
+  li: ({ node, ...props }: any) => <li className="mb-1" {...props} />,
+  h1: ({ children }: any) => (
+    <h1 className="text-2xl font-bold mt-6 mb-3">{children}</h1>
+  ),
+  h2: ({ children }: any) => (
+    <h2 className="text-xl font-semibold mt-5 mb-3">{children}</h2>
+  ),
+  h3: ({ children }: any) => (
+    <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>
+  ),
+  h4: ({ children }: any) => (
+    <h4 className="text-md font-medium mt-3 mb-2 text-gray-700">
+      {children}
+    </h4>
+  ),
+  a: ({ href, children }: any) => (
+    <a
+      href={href}
+      className="text-blue-600 underline underline-offset-2 hover:text-blue-800"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {children}
+    </a>
+  ),
+};
+
 const AdminMap = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => (
@@ -1141,22 +1175,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </h2>
               <div className="bg-white rounded-md border border-gray-200 p-4 prose prose-sm max-w-none overflow-y-auto h-96">
                 {termsOfServiceContent ? (
-                  <ReactMarkdown
-                    components={{
-                      ul: ({ node, ...props }) => (
-                        <ul className="list-disc list-inside ml-4" {...props} />
-                      ),
-                      ol: ({ node, ...props }) => (
-                        <ol
-                          className="list-decimal list-inside ml-4"
-                          {...props}
-                        />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li className="mb-1" {...props} />
-                      ),
-                    }}
-                  >
+                  <ReactMarkdown components={MARKDOWN_COMPONENTS}>
                     {termsOfServiceContent}
                   </ReactMarkdown>
                 ) : (
@@ -1213,22 +1232,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </h2>
               <div className="bg-white rounded-md border border-gray-200 p-4 prose prose-sm max-w-none overflow-y-auto h-96">
                 {rulesContent ? (
-                  <ReactMarkdown
-                    components={{
-                      ul: ({ node, ...props }) => (
-                        <ul className="list-disc list-inside ml-4" {...props} />
-                      ),
-                      ol: ({ node, ...props }) => (
-                        <ol
-                          className="list-decimal list-inside ml-4"
-                          {...props}
-                        />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li className="mb-1" {...props} />
-                      ),
-                    }}
-                  >
+                  <ReactMarkdown components={MARKDOWN_COMPONENTS}>
                     {rulesContent}
                   </ReactMarkdown>
                 ) : (
@@ -1285,22 +1289,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </h2>
               <div className="bg-white rounded-md border border-gray-200 p-4 max-w-none overflow-y-auto h-96">
                 {descriptionContent ? (
-                  <ReactMarkdown
-                    components={{
-                      ul: ({ node, ...props }) => (
-                        <ul className="list-disc list-inside ml-4" {...props} />
-                      ),
-                      ol: ({ node, ...props }) => (
-                        <ol
-                          className="list-decimal list-inside ml-4"
-                          {...props}
-                        />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li className="mb-1" {...props} />
-                      ),
-                    }}
-                  >
+                  <ReactMarkdown components={MARKDOWN_COMPONENTS}>
                     {descriptionContent}
                   </ReactMarkdown>
                 ) : (
@@ -1357,22 +1346,7 @@ const InstanceConfigurationPage: NextPage = () => {
               </h2>
               <div className="bg-white rounded-md border border-gray-200 p-4 prose prose-sm max-w-none overflow-y-auto h-96">
                 {privacyPolicyContent ? (
-                  <ReactMarkdown
-                    components={{
-                      ul: ({ node, ...props }) => (
-                        <ul className="list-disc list-inside ml-4" {...props} />
-                      ),
-                      ol: ({ node, ...props }) => (
-                        <ol
-                          className="list-decimal list-inside ml-4"
-                          {...props}
-                        />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li className="mb-1" {...props} />
-                      ),
-                    }}
-                  >
+                  <ReactMarkdown components={MARKDOWN_COMPONENTS}>
                     {privacyPolicyContent}
                   </ReactMarkdown>
                 ) : (
