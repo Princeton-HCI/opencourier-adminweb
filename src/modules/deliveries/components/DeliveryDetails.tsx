@@ -13,7 +13,7 @@ import {
   MenuTrigger,
   useToast,
 } from '../../../admin-web-components'
-import { EnumDeliveryEventType, STATE_MACHINE } from '../../../shared-types'
+import { EnumDeliveryEventType, EnumDeliveryStatus, STATE_MACHINE } from '../../../shared-types'
 import {
   cn,
 } from '../../../ui-shared-utils'
@@ -59,7 +59,8 @@ export function DeliveryDetails(props: DeliveryDetailsProps) {
   const { data: delivery } = getDeliveryResponse
 
   const DISALLOWED_EVENTS: EnumDeliveryEventType[] = [EnumDeliveryEventType.FAILED]
-  const possibleEvents = (Object.keys(STATE_MACHINE[delivery.status].on) as EnumDeliveryEventType[]).filter(
+  const transitions = STATE_MACHINE[delivery.status as EnumDeliveryStatus]?.on
+  const possibleEvents = (Object.keys(transitions ?? {}) as EnumDeliveryEventType[]).filter(
     (eventType) => !DISALLOWED_EVENTS.includes(eventType)
   )
 
