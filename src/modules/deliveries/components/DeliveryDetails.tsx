@@ -1,5 +1,6 @@
 import { useGetDeliveryQuery, useSubmitDeliveryEventMutation } from '@/api/deliveriesApi'
 import { useAdminPageNavigator } from '@/hooks/useAdminPageNavigator'
+import { AssignCourierCell } from '@/modules/deliveries/components/AssignCourierCell'
 import { StatusBadge } from '@/modules/deliveries/components/StatusBadge'
 import {
   Button,
@@ -126,6 +127,21 @@ export function DeliveryDetails(props: DeliveryDetailsProps) {
               <StatusBadge status={delivery.status} />
             </span>
           </div>
+
+          {delivery.status === EnumDeliveryStatus.ASSIGNING_COURIER ? (
+            <div
+              className="flex flex-wrap items-center gap-2 md:items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="text-sm text-muted-foreground">
+                Waiting for response from courier{' '}
+                <span className="font-mono text-xs text-foreground">
+                  {delivery.matchedCourierId ?? '—'}
+                </span>
+              </span>
+              <AssignCourierCell delivery={delivery} />
+            </div>
+          ) : null}
 
           {possibleEvents.length ? (
             <Menu>
