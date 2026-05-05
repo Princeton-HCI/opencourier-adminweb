@@ -1,7 +1,10 @@
 import { useGetDeliveriesQuery } from '@/api/deliveriesApi'
 import { DefaultLayout } from '@/components/layouts/DefaultLayout'
 import { useAdminPageNavigator } from '@/hooks/useAdminPageNavigator'
-import { AssignCourierCell } from '@/modules/deliveries/components/AssignCourierCell'
+import {
+  AssignCourierCell,
+  isDeliveryAwaitingCourierAssignment,
+} from '@/modules/deliveries/components/AssignCourierCell'
 import { DeliveriesFilters, DeliveriesTableFilters } from '@/modules/deliveries/components/DeliveriesTableFilters'
 import { StatusBadge } from '@/modules/deliveries/components/StatusBadge'
 import { DEFAULT_PAGE_SIZE, DataTable } from '../../admin-web-components'
@@ -24,17 +27,25 @@ const columns: ColumnDef<DeliveryAdminDto>[] = [
   {
     id: 'courierId',
     header: 'Courier',
-    cell: ({ row }) =>
-      row.original.courierId ? (
-        <span className="font-mono text-xs break-all">{row.original.courierId}</span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      ),
-  },
-  {
-    id: 'assignCourier',
-    header: 'Assign',
-    cell: ({ row }) => <AssignCourierCell delivery={row.original} />,
+    cell: ({ row }) => {
+      const d = row.original
+      const awaiting = isDeliveryAwaitingCourierAssignment(d)
+      return (
+        <div
+          className="flex min-w-0 items-center justify-between gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="min-w-0 flex-1">
+            {d.courierId ? (
+              <span className="font-mono text-xs break-all">{d.courierId}</span>
+            ) : awaiting ? null : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </div>
+          <AssignCourierCell delivery={d} />
+        </div>
+      )
+    },
   },
   // {
   //   header: 'Merchant',

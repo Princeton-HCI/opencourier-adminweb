@@ -22,6 +22,12 @@ import type { DeliveryAdminDto } from '../../../backend-admin-sdk'
 import { DeliveryAdminDtoStatusEnum } from '../../../backend-admin-sdk'
 import { useState } from 'react'
 
+export function isDeliveryAwaitingCourierAssignment(delivery: DeliveryAdminDto): boolean {
+  return (
+    delivery.status === DeliveryAdminDtoStatusEnum.AssigningCourier && !delivery.courierId
+  )
+}
+
 export function AssignCourierCell({ delivery }: { delivery: DeliveryAdminDto }) {
   const [open, setOpen] = useState(false)
   const [courierId, setCourierId] = useState<string>()
@@ -32,8 +38,7 @@ export function AssignCourierCell({ delivery }: { delivery: DeliveryAdminDto }) 
     { skip: !open },
   )
 
-  const canAssign =
-    delivery.status === DeliveryAdminDtoStatusEnum.AssigningCourier && !delivery.courierId
+  const canAssign = isDeliveryAwaitingCourierAssignment(delivery)
 
   const handleAssign = async () => {
     if (!courierId) {
@@ -55,11 +60,11 @@ export function AssignCourierCell({ delivery }: { delivery: DeliveryAdminDto }) 
   }
 
   if (!canAssign) {
-    return <span className="text-muted-foreground">—</span>
+    return null
   }
 
   return (
-    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
       <Dialog
         open={open}
         onOpenChange={(next) => {
