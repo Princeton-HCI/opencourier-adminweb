@@ -37,6 +37,12 @@ export interface DeliverySubmitEventAdminInput {
      * @memberof DeliverySubmitEventAdminInput
      */
     prepareTimeEstimate?: string | null;
+    /**
+     * Required for ACCEPTED transitions (manual assign). See opencourier-backend delivery.domain.service submitDeliveryEvent / DeliveryEventService.
+     * @type {string}
+     * @memberof DeliverySubmitEventAdminInput
+     */
+    courierId?: string | null;
 }
 
 
@@ -84,6 +90,7 @@ export function DeliverySubmitEventAdminInputFromJSONTyped(json: any, ignoreDisc
         'deliveryId': json['deliveryId'],
         'eventType': json['eventType'],
         'prepareTimeEstimate': !exists(json, 'prepareTimeEstimate') ? undefined : json['prepareTimeEstimate'],
+        'courierId': !exists(json, 'courierId') ? undefined : json['courierId'],
     };
 }
 
@@ -99,6 +106,7 @@ export function DeliverySubmitEventAdminInputToJSON(value?: DeliverySubmitEventA
         'deliveryId': value.deliveryId,
         'eventType': value.eventType,
         'prepareTimeEstimate': value.prepareTimeEstimate,
+        'courierId': value.courierId,
     };
 }
 

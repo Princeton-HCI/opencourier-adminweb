@@ -33,8 +33,9 @@ export const STATE_MACHINE: Record<EnumDeliveryStatus, DeliveryStateNode> = {
 	},
 	[EnumDeliveryStatus.ASSIGNING_COURIER]: {
 		on: {
+			[EnumDeliveryEventType.DISPATCHED]: EnumDeliveryStatus.DISPATCHED,
 			[EnumDeliveryEventType.ACCEPTED]: EnumDeliveryStatus.ACCEPTED,
-			[EnumDeliveryEventType.REJECTED]: EnumDeliveryStatus.CREATED,
+			[EnumDeliveryEventType.REJECTED]: EnumDeliveryStatus.ASSIGNING_COURIER,
 			[EnumDeliveryEventType.CANCELED]: EnumDeliveryStatus.CANCELED,
 			[EnumDeliveryEventType.FAILED]: EnumDeliveryStatus.FAILED,
 		},
