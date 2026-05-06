@@ -73,8 +73,8 @@ export function AssignCourierCell({ delivery }: { delivery: DeliveryAdminDto }) 
         }}
       >
         <DialogTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="shrink-0">
-            Assign
+          <Button type="button" variant="outline" size="sm" className="shrink-0 whitespace-normal">
+            Manually Reassign
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
@@ -111,7 +111,7 @@ export function AssignCourierCell({ delivery }: { delivery: DeliveryAdminDto }) 
             </Button>
             <Button type="button" disabled={isLoading || !courierId} onClick={() => void handleAssign()}>
               {isLoading ? <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Assign
+              Manually Reassign
             </Button>
           </DialogFooter>
         </DialogContent>
