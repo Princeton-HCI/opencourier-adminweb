@@ -1,14 +1,12 @@
 import { useGetDeliveriesQuery } from '@/api/deliveriesApi'
 import { DefaultLayout } from '@/components/layouts/DefaultLayout'
 import { useAdminPageNavigator } from '@/hooks/useAdminPageNavigator'
-import {
-  AssignCourierCell,
-  isDeliveryAwaitingCourierAssignment,
-} from '@/modules/deliveries/components/AssignCourierCell'
+import { AssignCourierCell } from '@/modules/deliveries/components/AssignCourierCell'
 import { DeliveriesFilters, DeliveriesTableFilters } from '@/modules/deliveries/components/DeliveriesTableFilters'
 import { StatusBadge } from '@/modules/deliveries/components/StatusBadge'
 import { DEFAULT_PAGE_SIZE, DataTable } from '../../admin-web-components'
 import { DeliveryAdminDto } from '../../backend-admin-sdk'
+import { EnumDeliveryStatus } from '../../shared-types'
 import { formatDate } from '../../ui-shared-utils'
 import { ColumnDef, PaginationState } from '@tanstack/react-table'
 import type { NextPage } from 'next'
@@ -29,16 +27,21 @@ const columns: ColumnDef<DeliveryAdminDto>[] = [
     header: 'Courier',
     cell: ({ row }) => {
       const d = row.original
-      const awaiting = isDeliveryAwaitingCourierAssignment(d)
+      const isAssigning = d.status === EnumDeliveryStatus.ASSIGNING_COURIER
       return (
         <div
-          className="flex min-w-0 items-center justify-between gap-2"
+          className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="min-w-0 flex-1">
-            {d.courierId ? (
+            {isAssigning ? (
+              <span className="text-xs leading-snug text-muted-foreground">
+                Waiting for response from courier{' '}
+                <span className="break-all font-mono text-foreground">{d.matchedCourierId ?? '—'}</span>
+              </span>
+            ) : d.courierId ? (
               <span className="font-mono text-xs break-all">{d.courierId}</span>
-            ) : awaiting ? null : (
+            ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </div>
