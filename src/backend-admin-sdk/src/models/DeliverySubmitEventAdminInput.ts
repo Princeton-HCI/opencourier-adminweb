@@ -61,7 +61,8 @@ export const DeliverySubmitEventAdminInputEventTypeEnum = {
     ArrivedAtPickupLocation: 'ARRIVED_AT_PICKUP_LOCATION',
     DroppedOff: 'DROPPED_OFF',
     ArrivedAtDropoffLocation: 'ARRIVED_AT_DROPOFF_LOCATION',
-    Failed: 'FAILED'
+    Failed: 'FAILED', 
+    OnTheWay: 'ON_THE_WAY'
 } as const;
 export type DeliverySubmitEventAdminInputEventTypeEnum = typeof DeliverySubmitEventAdminInputEventTypeEnum[keyof typeof DeliverySubmitEventAdminInputEventTypeEnum];
 
