@@ -72,7 +72,7 @@ const OrdersPage: NextPage = () => {
           const isAssigning = d.status === EnumDeliveryStatus.ASSIGNING_COURIER
           return (
             <div
-              className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2"
+              className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="min-w-0">
