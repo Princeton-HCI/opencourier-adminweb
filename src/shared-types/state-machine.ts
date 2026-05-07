@@ -22,11 +22,23 @@ export type DeliveryStateNode = {
 	on: DeliveryStateTransitions
 }
 
-/** Allowed event types from each status (matches admin submit flow where possible). */
+/**
+ * Admin `submit-event` / processDeliveryEvent (opencourier-backend) alignment:
+ *
+ * - CONFIRMED — not a status-changing admin event; omitted from STATE_MACHINE.
+ * - ACCEPTED — offerDeliveryToCourierAsAdmin when CREATED / ASSIGNING_COURIER with no courier yet → ASSIGNING_COURIER;
+ *   courier acceptance from ASSIGNING_COURIER → ACCEPTED. (Manual assign with courierId uses assignDeliveryToCourier.)
+ * - DISPATCHED — ASSIGNING_COURIER → DISPATCHED, ACCEPTED → DISPATCHED.
+ * - REJECTED — ASSIGNING_COURIER → ASSIGNING_COURIER.
+ * - PICKED_UP — ACCEPTED | DISPATCHED | COURIER_ARRIVED_AT_PICKUP_LOCATION → PICKED_UP.
+ * - CANCELED — non-terminal pre-dropoff states.
+ * - DROPPED_OFF — ON_THE_WAY | COURIER_ARRIVED_AT_DROPOFF_LOCATION → DROPPED_OFF (FULFILLED on doorstep unchanged).
+ * - FAILED — per transitions below; also CANCELED → FAILED.
+ */
 export const STATE_MACHINE: Record<EnumDeliveryStatus, DeliveryStateNode> = {
 	[EnumDeliveryStatus.CREATED]: {
 		on: {
-			[EnumDeliveryEventType.CONFIRMED]: EnumDeliveryStatus.ASSIGNING_COURIER,
+			[EnumDeliveryEventType.ACCEPTED]: EnumDeliveryStatus.ASSIGNING_COURIER,
 			[EnumDeliveryEventType.CANCELED]: EnumDeliveryStatus.CANCELED,
 			[EnumDeliveryEventType.FAILED]: EnumDeliveryStatus.FAILED,
 		},
@@ -43,6 +55,7 @@ export const STATE_MACHINE: Record<EnumDeliveryStatus, DeliveryStateNode> = {
 	[EnumDeliveryStatus.ACCEPTED]: {
 		on: {
 			[EnumDeliveryEventType.DISPATCHED]: EnumDeliveryStatus.DISPATCHED,
+			[EnumDeliveryEventType.PICKED_UP]: EnumDeliveryStatus.PICKED_UP,
 			[EnumDeliveryEventType.CANCELED]: EnumDeliveryStatus.CANCELED,
 			[EnumDeliveryEventType.FAILED]: EnumDeliveryStatus.FAILED,
 		},
@@ -50,6 +63,7 @@ export const STATE_MACHINE: Record<EnumDeliveryStatus, DeliveryStateNode> = {
 	[EnumDeliveryStatus.DISPATCHED]: {
 		on: {
 			[EnumDeliveryEventType.ARRIVED_AT_PICKUP_LOCATION]: EnumDeliveryStatus.COURIER_ARRIVED_AT_PICKUP_LOCATION,
+			[EnumDeliveryEventType.PICKED_UP]: EnumDeliveryStatus.PICKED_UP,
 			[EnumDeliveryEventType.CANCELED]: EnumDeliveryStatus.CANCELED,
 			[EnumDeliveryEventType.FAILED]: EnumDeliveryStatus.FAILED,
 		},
@@ -71,6 +85,7 @@ export const STATE_MACHINE: Record<EnumDeliveryStatus, DeliveryStateNode> = {
 	[EnumDeliveryStatus.ON_THE_WAY]: {
 		on: {
 			[EnumDeliveryEventType.ARRIVED_AT_DROPOFF_LOCATION]: EnumDeliveryStatus.COURIER_ARRIVED_AT_DROPOFF_LOCATION,
+			[EnumDeliveryEventType.DROPPED_OFF]: EnumDeliveryStatus.DROPPED_OFF,
 			[EnumDeliveryEventType.CANCELED]: EnumDeliveryStatus.CANCELED,
 			[EnumDeliveryEventType.FAILED]: EnumDeliveryStatus.FAILED,
 		},
@@ -84,6 +99,10 @@ export const STATE_MACHINE: Record<EnumDeliveryStatus, DeliveryStateNode> = {
 		},
 	},
 	[EnumDeliveryStatus.DROPPED_OFF]: { on: {} },
-	[EnumDeliveryStatus.CANCELED]: { on: {} },
+	[EnumDeliveryStatus.CANCELED]: {
+		on: {
+			[EnumDeliveryEventType.FAILED]: EnumDeliveryStatus.FAILED,
+		},
+	},
 	[EnumDeliveryStatus.FAILED]: { on: {} },
 }
