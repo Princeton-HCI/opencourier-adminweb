@@ -51,7 +51,7 @@ const SelectContent = React.forwardRef<
         className={cn(
           'p-1',
           position === 'popper' &&
-            'max-h-[18rem] w-full min-w-[var(--radix-select-trigger-width)] overflow-y-auto'
+            'select-viewport-scrollbar max-h-[18rem] w-full min-w-[var(--radix-select-trigger-width)] overflow-y-auto'
         )}
       >
         {children}
