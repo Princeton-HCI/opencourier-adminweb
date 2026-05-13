@@ -42,8 +42,11 @@ export const deliveriesApi = baseApi.injectEndpoints({
       },
       providesTags: [Tags.deliveries],
     }),
-    submitDeliveryEvent: build.mutation<DeliveryAdminDto, { deliveryId: string; eventType: EnumDeliveryEventType }>({
-      queryFn: async ({ deliveryId, eventType }, api) => {
+    submitDeliveryEvent: build.mutation<
+      DeliveryAdminDto,
+      { deliveryId: string; eventType: EnumDeliveryEventType; courierId?: string }
+    >({
+      queryFn: async ({ deliveryId, eventType, courierId }, api) => {
         try {
           const { accessToken } = (api.getState() as AppState).auth
           const sdk = prepareAdminSdk(accessToken || '')
@@ -52,6 +55,33 @@ export const deliveriesApi = baseApi.injectEndpoints({
             deliverySubmitEventAdminInput: {
               deliveryId,
               eventType,
+              ...(courierId ? { courierId } : {}),
+            },
+          })
+          return { data }
+        } catch (error) {
+          return {
+            error: handleBackendError(error, api),
+          }
+        }
+      },
+      invalidatesTags: [Tags.deliveries],
+    }),
+    /** Manual assign: admin ACCEPTED with courierId (opencourier-backend POST /api/admin/v1/deliveries/:id/submit-event). */
+    assignDeliveryToCourier: build.mutation<
+      DeliveryAdminDto,
+      { deliveryId: string; courierId: string }
+    >({
+      queryFn: async ({ deliveryId, courierId }, api) => {
+        try {
+          const { accessToken } = (api.getState() as AppState).auth
+          const sdk = prepareAdminSdk(accessToken || '')
+          const data = await sdk.deliveries().submitOrderEvent({
+            id: deliveryId,
+            deliverySubmitEventAdminInput: {
+              deliveryId,
+              eventType: EnumDeliveryEventType.ACCEPTED,
+              courierId,
             },
           })
           return { data }
@@ -66,4 +96,9 @@ export const deliveriesApi = baseApi.injectEndpoints({
   }),
 })
 
-export const { useGetDeliveriesQuery, useGetDeliveryQuery, useSubmitDeliveryEventMutation } = deliveriesApi
+export const {
+  useGetDeliveriesQuery,
+  useGetDeliveryQuery,
+  useSubmitDeliveryEventMutation,
+  useAssignDeliveryToCourierMutation,
+} = deliveriesApi

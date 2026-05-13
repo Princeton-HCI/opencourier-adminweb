@@ -1,7 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { EnumDeliveryEventType } from '../../../../shared-types'
 import { OrderEventFormValues } from '../../types'
 
 const formSchema = z.object({
@@ -13,7 +12,7 @@ export const useOrderStatusForm = () => {
     mode: 'onTouched',
     resolver: zodResolver(formSchema),
     defaultValues: {
-      eventType: EnumDeliveryEventType.CONFIRMED,
+      eventType: '',
     },
   })
 }

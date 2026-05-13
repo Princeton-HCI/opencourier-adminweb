@@ -1,71 +1,84 @@
-import { useGetDeliveriesQuery } from "@/api/deliveriesApi";
-import { DefaultLayout } from "@/components/layouts/DefaultLayout";
-import { useAdminPageNavigator } from "@/hooks/useAdminPageNavigator";
-import {
-  DeliveriesFilters,
-  DeliveriesTableFilters,
-} from "@/modules/deliveries/components/DeliveriesTableFilters";
-import { StatusBadge } from "@/modules/deliveries/components/StatusBadge";
-import { DEFAULT_PAGE_SIZE, DataTable } from "../../admin-web-components";
-import { DeliveryAdminDto } from "../../backend-admin-sdk";
-import { formatDate } from "../../ui-shared-utils";
-import { ColumnDef, PaginationState } from "@tanstack/react-table";
-import type { NextPage } from "next";
-import { useState } from "react";
+import { useGetCouriersQuery } from '@/api/couriersApi'
+import { DefaultLayout } from '@/components/layouts/DefaultLayout'
+import { useAdminPageNavigator } from '@/hooks/useAdminPageNavigator'
+import { CourierStatusBadge } from '@/modules/deliveries/components/CourierStatusBadge'
+import { DEFAULT_PAGE_SIZE, DataTable } from '../../admin-web-components'
+import type { CourierAdminDto } from '../../backend-admin-sdk'
+import { EnumCourierStatus } from '../../shared-types'
+import { formatDate } from '../../ui-shared-utils'
+import { ColumnDef, PaginationState } from '@tanstack/react-table'
+import type { NextPage } from 'next'
+import { useState } from 'react'
 
-const columns: ColumnDef<DeliveryAdminDto>[] = [
+function deliverySettingLabel(value: CourierAdminDto['deliverySetting']): string {
+  const labels: Record<CourierAdminDto['deliverySetting'], string> = {
+    AUTO_ACCEPT: 'Auto accept',
+    AUTO_REJECT: 'Auto reject',
+    MANUAL: 'Manual',
+    NONE: 'None',
+  }
+  return labels[value] ?? value
+}
+
+const columns: ColumnDef<CourierAdminDto>[] = [
   {
-    accessorKey: "id",
-    header: "Delivery ID",
+    id: 'name',
+    header: 'Name',
+    accessorFn: (row) => `${row.firstName} ${row.lastName}`.trim(),
   },
   {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    accessorKey: 'phoneNumber',
+    header: 'Phone number',
+    cell: ({ getValue }) => (getValue() as string | null) ?? '—',
   },
-  // {
-  //   header: 'Merchant',
-  //   accessorFn: ({ merchant }) => (merchant ? merchant.name : 'N/A'),
-  // },
-  // {
-  //   header: 'Customer',
-  //   accessorFn: ({ customer }) => (customer ? `${customer.firstName} ${customer.lastName}` : 'N/A'),
-  // },
-  // {
-  //   header: 'Customer Phone',
-  //   accessorFn: ({ customer }) => (customer && customer.cellPhone ? formatPhone(customer.cellPhone) : 'N/A'),
-  // },
   {
-    header: "Created At",
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => (
+      <CourierStatusBadge status={row.original.status as EnumCourierStatus} />
+    ),
+  },
+  {
+    accessorKey: 'deliverySetting',
+    header: 'Delivery setting',
+    cell: ({ row }) => deliverySettingLabel(row.original.deliverySetting),
+  },
+  {
+    id: 'joinedAt',
+    header: 'Joined at',
     accessorFn: ({ createdAt }) => formatDate(createdAt),
   },
-  // {
-  //   header: 'Subtotal',
-  //   accessorFn: ({ cost }) => (cost ? `$${formatPennies(cost.subtotalAmount)}` : 'N/A'),
-  // },
-];
+]
 
 const CouriersPage: NextPage = () => {
-  const { goToDeliveryDetails } = useAdminPageNavigator();
-  const [filters, setFilters] = useState<DeliveriesFilters>();
+  const { goToCourierDetails } = useAdminPageNavigator()
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
-  });
-  const getOrdersResponse = useGetDeliveriesQuery({
-    state: filters?.state,
-    search: filters?.search,
-    // merchantId: filters?.merchant,
-    // customerId: filters?.customer,
+  })
+
+  const getCouriersResponse = useGetCouriersQuery({
     page: pagination.pageIndex + 1,
     perPage: pagination.pageSize,
-  });
+  })
 
   return (
     <DefaultLayout>
       <h2 className="text-3xl font-medium tracking-tight">Couriers</h2>
-    </DefaultLayout>
-  );
-};
 
-export default CouriersPage;
+      <div className="mt-6">
+        <DataTable
+          columns={columns}
+          data={getCouriersResponse.data?.data ?? []}
+          serverPagination={true}
+          pagination={pagination}
+          onPaginationChange={setPagination}
+          totalCount={getCouriersResponse.data?.pagination?.totalItems ?? 0}
+          onRowClick={(courier) => goToCourierDetails(courier.id)}
+        />
+      </div>
+    </DefaultLayout>
+  )
+}
+
+export default CouriersPage

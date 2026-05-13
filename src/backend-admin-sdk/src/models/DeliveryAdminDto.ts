@@ -296,6 +296,12 @@ export interface DeliveryAdminDto {
      */
     courierId: string | null;
     /**
+     * Courier matched for assignment; awaiting accept/reject when status is ASSIGNING_COURIER.
+     * @type {string}
+     * @memberof DeliveryAdminDto
+     */
+    matchedCourierId: string | null;
+    /**
      * 
      * @type {string}
      * @memberof DeliveryAdminDto
@@ -481,6 +487,7 @@ export function DeliveryAdminDtoFromJSONTyped(json: any, ignoreDiscriminator: bo
         'externalUserInfo': json['externalUserInfo'],
         'externalId': json['externalId'],
         'courierId': json['courierId'],
+        'matchedCourierId': json['matchedCourierId'] == null ? null : json['matchedCourierId'],
         'partnerId': json['partnerId'],
         'deliveryQuoteId': json['deliveryQuoteId'],
         'customerName': json['customerName'],
@@ -544,6 +551,7 @@ export function DeliveryAdminDtoToJSON(value?: DeliveryAdminDto | null): any {
         'externalUserInfo': value.externalUserInfo,
         'externalId': value.externalId,
         'courierId': value.courierId,
+        'matchedCourierId': value.matchedCourierId,
         'partnerId': value.partnerId,
         'deliveryQuoteId': value.deliveryQuoteId,
         'customerName': value.customerName,
