@@ -1,5 +1,5 @@
 import { useAssignDeliveryToCourierMutation } from '@/api/deliveriesApi'
-import { useGetCouriersQuery } from '@/api/couriersApi'
+import { useGetAllCouriersQuery } from '@/api/couriersApi'
 import {
   Button,
   Dialog,
@@ -33,10 +33,9 @@ export function AssignCourierCell({ delivery }: { delivery: DeliveryAdminDto }) 
   const [courierId, setCourierId] = useState<string>()
   const { toast } = useToast()
   const [assignCourier, { isLoading }] = useAssignDeliveryToCourierMutation()
-  const { data: couriersResponse, isLoading: couriersLoading } = useGetCouriersQuery(
-    { page: 1, perPage: 200 },
-    { skip: !open },
-  )
+  const { data: couriers = [], isLoading: couriersLoading } = useGetAllCouriersQuery(undefined, {
+    skip: !open,
+  })
 
   const canAssign = isDeliveryAwaitingCourierAssignment(delivery)
 
@@ -96,7 +95,7 @@ export function AssignCourierCell({ delivery }: { delivery: DeliveryAdminDto }) 
                 <SelectValue placeholder={couriersLoading ? 'Loading…' : 'Select courier'} />
               </SelectTrigger>
               <SelectContent>
-                {(couriersResponse?.data ?? []).map((c) => (
+                {couriers.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.firstName} {c.lastName}
                     {c.phoneNumber ? ` · ${c.phoneNumber}` : ''}
